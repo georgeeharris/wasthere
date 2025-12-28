@@ -1,0 +1,117 @@
+import { useState, useEffect } from 'react';
+import { Act } from '../types';
+import { actsApi } from '../services/api';
+
+export function ActList() {
+  const [acts, setActs] = useState<Act[]>([]);
+  const [newActName, setNewActName] = useState('');
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingName, setEditingName] = useState('');
+
+  useEffect(() => {
+    loadActs();
+  }, []);
+
+  const loadActs = async () => {
+    try {
+      const data = await actsApi.getAll();
+      setActs(data);
+    } catch (error) {
+      console.error('Failed to load acts:', error);
+    }
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newActName.trim()) return;
+
+    try {
+      await actsApi.create(newActName);
+      setNewActName('');
+      await loadActs();
+    } catch (error) {
+      console.error('Failed to create act:', error);
+    }
+  };
+
+  const handleUpdate = async (id: number) => {
+    if (!editingName.trim()) return;
+
+    try {
+      await actsApi.update(id, editingName);
+      setEditingId(null);
+      setEditingName('');
+      await loadActs();
+    } catch (error) {
+      console.error('Failed to update act:', error);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this act?')) return;
+
+    try {
+      await actsApi.delete(id);
+      await loadActs();
+    } catch (error) {
+      console.error('Failed to delete act:', error);
+    }
+  };
+
+  const startEdit = (act: Act) => {
+    setEditingId(act.id);
+    setEditingName(act.name);
+  };
+
+  return (
+    <div className="card">
+      <h2>Acts</h2>
+      
+      <form onSubmit={handleCreate} className="form">
+        <input
+          type="text"
+          value={newActName}
+          onChange={(e) => setNewActName(e.target.value)}
+          placeholder="New act name"
+          className="input"
+        />
+        <button type="submit" className="btn btn-primary">Add Act</button>
+      </form>
+
+      <ul className="list">
+        {acts.map((act) => (
+          <li key={act.id} className="list-item">
+            {editingId === act.id ? (
+              <div className="edit-form">
+                <input
+                  type="text"
+                  value={editingName}
+                  onChange={(e) => setEditingName(e.target.value)}
+                  className="input"
+                />
+                <button onClick={() => handleUpdate(act.id)} className="btn btn-small">
+                  Save
+                </button>
+                <button onClick={() => setEditingId(null)} className="btn btn-small">
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <div className="list-item-content">
+                <span className="list-item-text">{act.name}</span>
+                <div className="list-item-actions">
+                  <button onClick={() => startEdit(act)} className="btn btn-small">
+                    Edit
+                  </button>
+                  <button onClick={() => handleDelete(act.id)} className="btn btn-small btn-danger">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

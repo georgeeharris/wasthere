@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Act } from '../types';
+import type { Act } from '../types';
 import { actsApi } from '../services/api';
 
 export function ActList() {

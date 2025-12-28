@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ClubNight, Event, Venue, Act } from '../types';
+import type { ClubNight, Event, Venue, Act } from '../types';
 import { clubNightsApi, eventsApi, venuesApi, actsApi } from '../services/api';
 
 export function ClubNightList() {

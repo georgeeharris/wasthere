@@ -1,4 +1,4 @@
-import { Event, Venue, Act, ClubNight, ClubNightDto } from '../types';
+import type { Event, Venue, Act, ClubNight, ClubNightDto } from '../types';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 

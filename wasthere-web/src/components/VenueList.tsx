@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Venue } from '../types';
+import type { Venue } from '../types';
 import { venuesApi } from '../services/api';
 
 export function VenueList() {

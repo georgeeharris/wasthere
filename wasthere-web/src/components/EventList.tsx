@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Event } from '../types';
+import type { Event } from '../types';
 import { eventsApi } from '../services/api';
 
 interface EventListProps {
   onEventSelect?: (event: Event) => void;
 }
 
-export function EventList({ onEventSelect }: EventListProps) {
+export function EventList(_props: EventListProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [newEventName, setNewEventName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);

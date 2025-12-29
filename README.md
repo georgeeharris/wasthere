@@ -1,6 +1,6 @@
 # WasThere - Club Events Archive
 
-A simple, clean web application for maintaining an archive of club events. Keep track of club nights with events, venues, acts, and dates.
+A simple, clean web application for maintaining an archive of club events. Keep track of club nights with events, venues, acts, and dates. Hoping to be the discogs of techno club events in the late 90s / early 00s
 
 ## Features
 

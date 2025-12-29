@@ -1,0 +1,25 @@
+# Build stage
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copy csproj and restore dependencies
+COPY WasThere.Api/WasThere.Api.csproj WasThere.Api/
+RUN dotnet restore "WasThere.Api/WasThere.Api.csproj"
+
+# Copy everything else and build
+COPY WasThere.Api/ WasThere.Api/
+WORKDIR /src/WasThere.Api
+RUN dotnet build "WasThere.Api.csproj" -c Release -o /app/build
+
+# Publish stage
+FROM build AS publish
+RUN dotnet publish "WasThere.Api.csproj" -c Release -o /app/publish
+
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+WORKDIR /app
+EXPOSE 5000
+ENV ASPNETCORE_URLS=http://+:5000
+
+COPY --from=publish /app/publish .
+ENTRYPOINT ["dotnet", "WasThere.Api.dll"]

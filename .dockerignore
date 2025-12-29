@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+**/out/
+**/.vs/
+**/.vscode/
+**/*.user
+**/.DS_Store
+**/Thumbs.db
+**/*.swp
+**/*.log
+**/node_modules/
+**/dist/

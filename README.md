@@ -16,6 +16,7 @@ A simple, clean web application for maintaining an archive of club events. Keep 
 - **Frontend**: React with TypeScript (Vite)
 - **Database**: PostgreSQL (when containerized) or In-Memory (for development)
 - **Deployment**: Docker & Docker Compose
+- **CI/CD**: GitHub Actions for automated testing and deployment
 
 ## Getting Started
 
@@ -136,4 +137,22 @@ The application consists of three containers:
 
 All containers are networked together and the database includes health checks to ensure proper startup order.
 
+## CI/CD Pipeline
+
+This project includes automated CI/CD pipelines using GitHub Actions:
+
+- **Continuous Integration**: Automatically tests and builds the application on every push and pull request
+- **Continuous Deployment**: Automatically deploys to your Linux VPS when changes are pushed to the `main` branch
+
+### Setting Up Automated Deployment
+
+To set up automated deployment to your VPS:
+
+1. Follow the [CI/CD Setup Guide](.github/CICD-SETUP.md) for detailed instructions
+2. Configure GitHub Secrets as described in the [Secrets Reference](.github/SECRETS-REFERENCE.md)
+3. Push to the `main` branch to trigger automatic deployment
+
+**Quick Setup:**
+- Required: `VPS_HOST`, `VPS_USERNAME`, `VPS_SSH_KEY`, `POSTGRES_PASSWORD`
+- See [.github/SECRETS-REFERENCE.md](.github/SECRETS-REFERENCE.md) for the complete list
 

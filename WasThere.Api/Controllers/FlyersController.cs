@@ -13,6 +13,7 @@ public class FlyersController : ControllerBase
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<FlyersController> _logger;
     private const long MaxFileSize = 10 * 1024 * 1024; // 10MB
+    private const string UploadsFolder = "uploads";
     private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
 
     public FlyersController(
@@ -99,7 +100,7 @@ public class FlyersController : ControllerBase
         var dateFolder = earliestClubNightDate.ToString("yyyy-MM-dd");
 
         // Create folder structure: uploads/{event}/{venue}/{date}/
-        var uploadsPath = Path.Combine(_environment.ContentRootPath, "uploads", sanitizedEventName, sanitizedVenueName, dateFolder);
+        var uploadsPath = Path.Combine(_environment.ContentRootPath, UploadsFolder, sanitizedEventName, sanitizedVenueName, dateFolder);
         Directory.CreateDirectory(uploadsPath);
 
         // Generate unique filename
@@ -121,7 +122,7 @@ public class FlyersController : ControllerBase
         }
 
         // Create relative path for storage in database
-        var relativePath = Path.Combine("uploads", sanitizedEventName, sanitizedVenueName, dateFolder, uniqueFileName);
+        var relativePath = Path.Combine(UploadsFolder, sanitizedEventName, sanitizedVenueName, dateFolder, uniqueFileName);
 
         // Create Flyer entity
         var flyer = new Flyer

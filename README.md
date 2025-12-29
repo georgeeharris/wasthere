@@ -74,6 +74,16 @@ cp .env.example .env
 # Edit .env with your preferred settings
 ```
 
+Key configuration options:
+- `POSTGRES_PASSWORD`: Required - Set a strong database password
+- `CORS_ORIGINS`: Comma-separated list of allowed frontend origins (default: localhost)
+  - For production with an IP address: `CORS_ORIGINS=http://82.165.153.98`
+  - For production with a domain: `CORS_ORIGINS=http://yourdomain.com,https://yourdomain.com`
+- `VITE_API_URL`: Frontend API endpoint URL
+- Ports: `API_PORT`, `WEB_PORT`, `DB_PORT`
+
+**Note**: After changing `.env`, restart the services with `docker compose restart`
+
 ### Option 2: Local Development
 
 #### Prerequisites

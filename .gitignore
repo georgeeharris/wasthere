@@ -80,3 +80,6 @@ dist-ssr/
 .env
 .env.local
 .env.*.local
+
+# Uploaded files
+uploads/

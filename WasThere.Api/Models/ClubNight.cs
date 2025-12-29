@@ -11,5 +11,8 @@ public class ClubNight
     public int VenueId { get; set; }
     public Venue? Venue { get; set; }
     
+    public int? FlyerId { get; set; }
+    public Flyer? Flyer { get; set; }
+    
     public ICollection<ClubNightAct> ClubNightActs { get; set; } = new List<ClubNightAct>();
 }

@@ -63,14 +63,21 @@ case $OS in
     centos|rhel)
         echo "Installing Docker on CentOS/RHEL..."
         
-        # Install prerequisites
-        yum install -y yum-utils
-        
-        # Set up the repository
-        yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+        # Detect version to use appropriate package manager
+        if command -v dnf &> /dev/null; then
+            # RHEL 8+ or CentOS 8+ uses dnf
+            PKG_MGR="dnf"
+            dnf install -y dnf-plugins-core
+            dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+        else
+            # Older versions use yum
+            PKG_MGR="yum"
+            yum install -y yum-utils
+            yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+        fi
         
         # Install Docker Engine
-        yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        $PKG_MGR install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
         
         # Start Docker
         systemctl start docker

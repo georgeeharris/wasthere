@@ -9,10 +9,17 @@ public class ClubEventContextFactory : IDesignTimeDbContextFactory<ClubEventCont
     {
         var optionsBuilder = new DbContextOptionsBuilder<ClubEventContext>();
         
-        // Use connection string from environment variable or a default for migrations
-        // This is only used at design time for generating migrations
-        var connectionString = Environment.GetEnvironmentVariable("DESIGN_TIME_CONNECTION_STRING")
-            ?? "Host=localhost;Database=wasthere;Username=postgres;Password=postgres";
+        // Use connection string from environment variable for design-time operations
+        // This is only used for generating migrations, not at runtime
+        // Set DESIGN_TIME_CONNECTION_STRING environment variable with your connection details
+        var connectionString = Environment.GetEnvironmentVariable("DESIGN_TIME_CONNECTION_STRING");
+        
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            throw new InvalidOperationException(
+                "DESIGN_TIME_CONNECTION_STRING environment variable must be set for migrations. " +
+                "Example: export DESIGN_TIME_CONNECTION_STRING='Host=localhost;Database=wasthere;Username=postgres;Password=yourpassword'");
+        }
         
         optionsBuilder.UseNpgsql(connectionString);
         

@@ -12,6 +12,7 @@ echo ""
 
 ERRORS=0
 WARNINGS=0
+DEFAULT_PASSWORD="change_this_password_in_production"
 
 # Check if .env file exists
 if [ ! -f .env ]; then
@@ -23,7 +24,7 @@ else
     echo "✓ .env file exists"
     
     # Check if password is set
-    if grep -q "POSTGRES_PASSWORD=change_this_password_in_production" .env 2>/dev/null; then
+    if grep -q "POSTGRES_PASSWORD=${DEFAULT_PASSWORD}" .env 2>/dev/null; then
         echo "❌ ERROR: Default password detected in .env"
         echo "   Please set a strong POSTGRES_PASSWORD in .env"
         ERRORS=$((ERRORS + 1))

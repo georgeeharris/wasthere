@@ -156,6 +156,21 @@ docker compose up -d
 
 ## Data Management
 
+### Database Migrations
+
+If you need to create new database migrations during development:
+
+```bash
+# Set the connection string for design-time operations
+export DESIGN_TIME_CONNECTION_STRING='Host=localhost;Database=wasthere;Username=postgres;Password=yourpassword'
+
+# Create a new migration
+cd WasThere.Api
+dotnet ef migrations add MigrationName
+
+# The migration will be applied automatically when the container starts
+```
+
 ### Backup the database
 ```bash
 docker compose exec db pg_dump -U postgres wasthere > backup_$(date +%Y%m%d_%H%M%S).sql

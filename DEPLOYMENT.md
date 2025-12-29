@@ -63,6 +63,7 @@ Available configuration options:
 - `POSTGRES_DB`: Database name (default: wasthere)
 - `POSTGRES_USER`: Database username (default: wasthere_user)
 - `POSTGRES_PASSWORD`: Database password (**MUST BE SET** - no default)
+- `CORS_ORIGINS`: Comma-separated list of allowed frontend origins (default: http://localhost,http://localhost:5173,http://localhost:3000)
 - `VITE_API_URL`: Frontend API URL (default: http://localhost:5000/api)
 - `DB_PORT`: Database port (default: 5432)
 - `API_PORT`: API port (default: 5000)
@@ -73,6 +74,7 @@ Available configuration options:
 - Never commit the `.env` file to version control
 - Consider using Docker secrets for sensitive data in production
 - Remove or change the DB_PORT mapping to not expose PostgreSQL externally
+- **Update `CORS_ORIGINS`** to match your actual domain(s), e.g., `CORS_ORIGINS=http://82.165.153.98,https://yourdomain.com`
 
 ### Verify Configuration
 
@@ -207,6 +209,28 @@ docker compose ps
 # Restart database
 docker compose restart db
 ```
+
+### CORS errors in browser console
+If you see errors like "Access to fetch has been blocked by CORS policy":
+
+1. Check your `CORS_ORIGINS` setting in `.env`:
+   ```bash
+   # For production with IP address
+   CORS_ORIGINS=http://82.165.153.98
+   
+   # For production with domain name
+   CORS_ORIGINS=http://yourdomain.com,https://yourdomain.com
+   ```
+
+2. Restart the API container after changing `.env`:
+   ```bash
+   docker compose restart api
+   ```
+
+3. Verify the CORS setting is applied:
+   ```bash
+   docker compose logs api | grep -i cors
+   ```
 
 ### Port conflicts
 If ports 80, 5000, or 5432 are already in use, edit `docker-compose.yml`:

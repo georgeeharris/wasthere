@@ -29,6 +29,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
       - ConnectionStrings__DefaultConnection=Host=db;Database=${POSTGRES_DB:-wasthere};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD}
+      - CorsOrigins=${CORS_ORIGINS:-http://localhost,http://localhost:5173,http://localhost:3000}
     ports:
       - "${API_PORT:-5000}:5000"
     depends_on:

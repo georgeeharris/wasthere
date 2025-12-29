@@ -154,7 +154,7 @@ Add each of the following secrets one by one:
 #### **POSTGRES_USER** (Optional)
 - **Name:** `POSTGRES_USER`
 - **Value:** Database username
-- **Default:** `wasthere_user`
+- **Default:** `postgres`
 
 #### **VITE_API_URL** (Optional)
 - **Name:** `VITE_API_URL`

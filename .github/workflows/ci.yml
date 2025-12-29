@@ -47,7 +47,7 @@ jobs:
     - name: Lint
       run: |
         cd wasthere-web
-        npm run lint || echo "Linting found issues but continuing build"
+        npm run lint
       continue-on-error: true
     
     - name: Build

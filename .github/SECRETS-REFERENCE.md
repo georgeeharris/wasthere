@@ -24,7 +24,7 @@ This document provides a quick reference for all GitHub Secrets needed for the C
 | `VPS_SSH_PORT` | SSH port | `22` |
 | `VPS_APP_PATH` | App directory on VPS | `~/wasthere` |
 | `POSTGRES_DB` | Database name | `wasthere` |
-| `POSTGRES_USER` | Database username | `wasthere_user` |
+| `POSTGRES_USER` | Database username | `postgres` |
 | `VITE_API_URL` | Frontend API URL | `http://localhost:5000/api` |
 | `WEB_PORT` | Web frontend port | `80` |
 | `API_PORT` | API port | `5000` |

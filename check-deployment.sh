@@ -24,12 +24,12 @@ else
     echo "✓ .env file exists"
     
     # Check if password is set
-    if grep -q "POSTGRES_PASSWORD=${DEFAULT_PASSWORD}" .env 2>/dev/null; then
+    if grep -qE "POSTGRES_PASSWORD\s*=\s*${DEFAULT_PASSWORD}" .env 2>/dev/null; then
         echo "❌ ERROR: Default password detected in .env"
         echo "   Please set a strong POSTGRES_PASSWORD in .env"
         ERRORS=$((ERRORS + 1))
-    elif grep -q "POSTGRES_PASSWORD=" .env 2>/dev/null; then
-        PASSWORD=$(grep "POSTGRES_PASSWORD=" .env | cut -d'=' -f2)
+    elif grep -qE "POSTGRES_PASSWORD\s*=" .env 2>/dev/null; then
+        PASSWORD=$(grep -E "POSTGRES_PASSWORD\s*=" .env | cut -d'=' -f2 | tr -d ' ')
         PASSWORD_LENGTH=${#PASSWORD}
         
         if [ $PASSWORD_LENGTH -lt 12 ]; then
@@ -101,7 +101,11 @@ fi
 # Check port availability (if Docker is installed)
 if command -v docker &> /dev/null; then
     if [ -f .env ]; then
-        source .env
+        # Load environment variables, handling spaces around =
+        set -a
+        source <(grep -v '^#' .env | sed 's/[[:space:]]*=[[:space:]]*/=/g')
+        set +a
+        
         WEB_PORT=${WEB_PORT:-80}
         API_PORT=${API_PORT:-5000}
         DB_PORT=${DB_PORT:-5432}

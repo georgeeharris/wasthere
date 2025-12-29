@@ -40,6 +40,7 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Apply database migrations if using PostgreSQL
+// For production deployments with multiple replicas, consider using a separate migration job
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
@@ -50,12 +51,16 @@ using (var scope = app.Services.CreateScope())
     {
         try
         {
+            var logger = services.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("Applying database migrations...");
             context.Database.Migrate();
+            logger.LogInformation("Database migrations applied successfully.");
         }
         catch (Exception ex)
         {
             var logger = services.GetRequiredService<ILogger<Program>>();
             logger.LogError(ex, "An error occurred while migrating the database.");
+            throw; // Fail fast if migrations fail
         }
     }
 }

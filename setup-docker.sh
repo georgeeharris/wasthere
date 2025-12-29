@@ -63,6 +63,9 @@ case $OS in
     centos|rhel)
         echo "Installing Docker on CentOS/RHEL..."
         
+        # Note: Using CentOS repository for both CentOS and RHEL as they are binary compatible
+        # For official RHEL support, customers should use RHEL's own repositories
+        
         # Detect version to use appropriate package manager
         if command -v dnf &> /dev/null; then
             # RHEL 8+ or CentOS 8+ uses dnf

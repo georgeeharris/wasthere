@@ -9,6 +9,7 @@ jobs:
   deploy:
     name: Deploy to Linux VPS
     runs-on: ubuntu-latest
+    permissions: {}
     
     steps:
     - name: Deploy to VPS

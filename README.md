@@ -8,6 +8,7 @@ A simple, clean web application for maintaining an archive of club events. Keep 
 - **Venues Management**: Maintain a list of venues (e.g., "Sankey's Soap")
 - **Acts Management**: Track performing artists
 - **Club Nights**: Create club night instances that combine events, venues, dates, and lineup of acts
+- **Flyer Management**: Upload and manage flyer images organized by event, venue, and date
 
 ## Tech Stack
 
@@ -114,6 +115,9 @@ The frontend will start at `http://localhost:5173`
 - `GET/POST/PUT/DELETE /api/venues` - Manage venues
 - `GET/POST/PUT/DELETE /api/acts` - Manage acts
 - `GET/POST/PUT/DELETE /api/clubnights` - Manage club night instances
+- `GET/POST/DELETE /api/flyers` - Manage flyer images
+  - `POST /api/flyers/upload` - Upload flyer image with Event, Venue, and earliest ClubNight date
+  - Static files served at `/uploads/{event}/{venue}/{date}/`
 
 ## Development Notes
 

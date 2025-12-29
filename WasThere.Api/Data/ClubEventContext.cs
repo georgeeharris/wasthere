@@ -14,6 +14,7 @@ public class ClubEventContext : DbContext
     public DbSet<Act> Acts { get; set; } = null!;
     public DbSet<ClubNight> ClubNights { get; set; } = null!;
     public DbSet<ClubNightAct> ClubNightActs { get; set; } = null!;
+    public DbSet<Flyer> Flyers { get; set; } = null!;
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -32,5 +33,24 @@ public class ClubEventContext : DbContext
             .HasOne(cna => cna.Act)
             .WithMany(a => a.ClubNightActs)
             .HasForeignKey(cna => cna.ActId);
+        
+        // Configure Flyer relationships
+        modelBuilder.Entity<Flyer>()
+            .HasOne(f => f.Event)
+            .WithMany()
+            .HasForeignKey(f => f.EventId)
+            .OnDelete(DeleteBehavior.Restrict);
+        
+        modelBuilder.Entity<Flyer>()
+            .HasOne(f => f.Venue)
+            .WithMany()
+            .HasForeignKey(f => f.VenueId)
+            .OnDelete(DeleteBehavior.Restrict);
+        
+        modelBuilder.Entity<ClubNight>()
+            .HasOne(cn => cn.Flyer)
+            .WithMany(f => f.ClubNights)
+            .HasForeignKey(cn => cn.FlyerId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

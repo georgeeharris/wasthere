@@ -56,7 +56,7 @@ A complete CI/CD pipeline using GitHub Actions has been added to the repository 
 - VPS_SSH_PORT (default: 22)
 - VPS_APP_PATH (default: ~/wasthere)
 - POSTGRES_DB (default: wasthere)
-- POSTGRES_USER (default: wasthere_user)
+- POSTGRES_USER (default: postgres)
 - VITE_API_URL (default: http://localhost:5000/api)
 - WEB_PORT (default: 80)
 - API_PORT (default: 5000)

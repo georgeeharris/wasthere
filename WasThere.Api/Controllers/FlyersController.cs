@@ -132,7 +132,7 @@ public class FlyersController : ControllerBase
             UploadedAt = DateTime.UtcNow,
             EventId = eventId,
             VenueId = venueId,
-            EarliestClubNightDate = earliestClubNightDate
+            EarliestClubNightDate = DateTime.SpecifyKind(earliestClubNightDate, DateTimeKind.Utc)
         };
 
         _context.Flyers.Add(flyer);

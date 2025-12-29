@@ -81,7 +81,7 @@ public class ClubNightsController : ControllerBase
     {
         var clubNight = new ClubNight
         {
-            Date = dto.Date,
+            Date = DateTime.SpecifyKind(dto.Date, DateTimeKind.Utc),
             EventId = dto.EventId,
             VenueId = dto.VenueId
         };
@@ -118,7 +118,7 @@ public class ClubNightsController : ControllerBase
             return NotFound();
         }
 
-        clubNight.Date = dto.Date;
+        clubNight.Date = DateTime.SpecifyKind(dto.Date, DateTimeKind.Utc);
         clubNight.EventId = dto.EventId;
         clubNight.VenueId = dto.VenueId;
 

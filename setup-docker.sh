@@ -60,8 +60,8 @@ case $OS in
         apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
         ;;
         
-    centos|rhel|fedora)
-        echo "Installing Docker on CentOS/RHEL/Fedora..."
+    centos|rhel)
+        echo "Installing Docker on CentOS/RHEL..."
         
         # Install prerequisites
         yum install -y yum-utils
@@ -71,6 +71,22 @@ case $OS in
         
         # Install Docker Engine
         yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        
+        # Start Docker
+        systemctl start docker
+        ;;
+    
+    fedora)
+        echo "Installing Docker on Fedora..."
+        
+        # Install prerequisites
+        dnf install -y dnf-plugins-core
+        
+        # Set up the repository
+        dnf config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+        
+        # Install Docker Engine
+        dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
         
         # Start Docker
         systemctl start docker

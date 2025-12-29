@@ -44,25 +44,49 @@ docker compose version
 docker run hello-world
 ```
 
-## Step 3: Configure the Application (Optional)
+## Step 3: Configure the Application (Required)
 
-The application works with default settings, but you can customize them:
+**IMPORTANT**: You must create a `.env` file with secure credentials before starting the application.
 
 ```bash
 # Copy the example environment file
 cp .env.example .env
 
-# Edit the file with your preferred settings
+# Edit the file and set a strong password
 nano .env
 ```
 
+**Required configuration**:
+- `POSTGRES_PASSWORD`: Set a strong password (minimum 16 characters recommended)
+
 Available configuration options:
 - `POSTGRES_DB`: Database name (default: wasthere)
-- `POSTGRES_USER`: Database username (default: postgres)
-- `POSTGRES_PASSWORD`: Database password (default: postgres)
+- `POSTGRES_USER`: Database username (default: wasthere_user)
+- `POSTGRES_PASSWORD`: Database password (**MUST BE SET** - no default)
 - `VITE_API_URL`: Frontend API URL (default: http://localhost:5000/api)
+- `DB_PORT`: Database port (default: 5432)
+- `API_PORT`: API port (default: 5000)
+- `WEB_PORT`: Web frontend port (default: 80)
 
-**Security Note**: For production deployments, always change the default PostgreSQL password!
+**Security Note**: For production deployments:
+- Use a strong, randomly generated password (e.g., `openssl rand -base64 32`)
+- Never commit the `.env` file to version control
+- Consider using Docker secrets for sensitive data in production
+- Remove or change the DB_PORT mapping to not expose PostgreSQL externally
+
+### Verify Configuration
+
+Run the deployment checker to verify everything is configured correctly:
+
+```bash
+bash check-deployment.sh
+```
+
+This will check for:
+- Required files and configurations
+- Secure password settings
+- Port availability
+- Sufficient disk space
 
 ## Step 4: Deploy the Application
 

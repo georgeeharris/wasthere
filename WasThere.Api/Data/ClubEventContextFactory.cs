@@ -9,9 +9,12 @@ public class ClubEventContextFactory : IDesignTimeDbContextFactory<ClubEventCont
     {
         var optionsBuilder = new DbContextOptionsBuilder<ClubEventContext>();
         
-        // Use a default connection string for migrations
-        // This won't be used at runtime, only for generating migrations
-        optionsBuilder.UseNpgsql("Host=localhost;Database=wasthere;Username=postgres;Password=postgres");
+        // Use connection string from environment variable or a default for migrations
+        // This is only used at design time for generating migrations
+        var connectionString = Environment.GetEnvironmentVariable("DESIGN_TIME_CONNECTION_STRING")
+            ?? "Host=localhost;Database=wasthere;Username=postgres;Password=postgres";
+        
+        optionsBuilder.UseNpgsql(connectionString);
         
         return new ClubEventContext(optionsBuilder.Options);
     }

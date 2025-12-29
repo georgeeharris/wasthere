@@ -38,6 +38,11 @@ sudo bash setup-docker.sh
 #### Running with Docker
 
 ```bash
+# First, create a .env file with secure credentials
+cp .env.example .env
+# Edit .env and set POSTGRES_PASSWORD to a strong password
+nano .env
+
 # Start all services (frontend, backend, and database)
 docker compose up -d
 
@@ -55,6 +60,8 @@ The application will be available at:
 - **Frontend**: http://localhost
 - **API**: http://localhost:5000
 - **Swagger UI**: http://localhost:5000/swagger
+
+**Important**: You must set a secure `POSTGRES_PASSWORD` in the `.env` file before running.
 
 #### Configuration
 

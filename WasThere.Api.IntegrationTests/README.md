@@ -99,15 +99,12 @@ var content = new Content
 
 ### The Fix
 
-The fix properly initializes the `Parts` collection before adding items:
+The fix uses the null-coalescing assignment operator to ensure `Parts` is initialized:
 
 ```csharp
-// Fixed version - initialize Content and check Parts
+// Fixed version - use null-coalescing assignment
 var content = new Content();
-if (content.Parts == null)
-{
-    content.Parts = new List<Part>();
-}
+content.Parts ??= new List<Part>();
 content.Parts.Add(new Part { Text = prompt });
 content.Parts.Add(new Part
 {

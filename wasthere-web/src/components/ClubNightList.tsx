@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { ClubNight, Event, Venue, Act } from '../types';
 import { clubNightsApi, eventsApi, venuesApi, actsApi } from '../services/api';
+import { SearchableMultiSelect } from './SearchableMultiSelect';
 
 export function ClubNightList() {
   const [clubNights, setClubNights] = useState<ClubNight[]>([]);
@@ -11,7 +12,7 @@ export function ClubNightList() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
-    date: '',
+    date: '2005-01-07', // First Friday in 2005
     eventId: 0,
     venueId: 0,
     actIds: [] as number[],
@@ -81,20 +82,11 @@ export function ClubNightList() {
     setShowForm(false);
     setEditingId(null);
     setFormData({
-      date: '',
+      date: '2005-01-07', // First Friday in 2005
       eventId: 0,
       venueId: 0,
       actIds: [],
     });
-  };
-
-  const toggleAct = (actId: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      actIds: prev.actIds.includes(actId)
-        ? prev.actIds.filter((id) => id !== actId)
-        : [...prev.actIds, actId],
-    }));
   };
 
   const formatDate = (dateString: string) => {
@@ -168,18 +160,12 @@ export function ClubNightList() {
 
           <div className="form-group">
             <label>Acts</label>
-            <div className="checkbox-group">
-              {acts.map((act) => (
-                <label key={act.id} className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={formData.actIds.includes(act.id)}
-                    onChange={() => toggleAct(act.id)}
-                  />
-                  <span>{act.name}</span>
-                </label>
-              ))}
-            </div>
+            <SearchableMultiSelect
+              options={acts}
+              selectedIds={formData.actIds}
+              onChange={(actIds) => setFormData({ ...formData, actIds })}
+              placeholder="Select acts..."
+            />
           </div>
 
           <div className="form-actions">

@@ -17,6 +17,12 @@ public class ClubNightData
     public string? EventName { get; set; }
     public string? VenueName { get; set; }
     public DateTime? Date { get; set; }
+    
+    // For partial dates when year is not on flyer
+    public string? DayOfWeek { get; set; }
+    public int? Month { get; set; }
+    public int? Day { get; set; }
+    
     public List<ActData> Acts { get; set; } = new();
 }
 

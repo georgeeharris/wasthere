@@ -18,6 +18,9 @@ builder.Services.AddSwaggerGen();
 // Add HttpClient for Gemini service (also registers the service)
 builder.Services.AddHttpClient<IGoogleGeminiService, GoogleGeminiService>();
 
+// Add DateYearInferenceService
+builder.Services.AddSingleton<IDateYearInferenceService, DateYearInferenceService>();
+
 // Add DbContext - Use PostgreSQL if connection string is provided, otherwise use in-memory database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (!string.IsNullOrEmpty(connectionString))

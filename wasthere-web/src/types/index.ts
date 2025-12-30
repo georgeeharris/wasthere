@@ -52,3 +52,19 @@ export interface Flyer {
   venue?: Venue;
   earliestClubNightDate: string;
 }
+
+export interface DiagnosticStep {
+  name: string;
+  status: string;
+  timestamp: string;
+  durationMs?: number | null;
+  details?: string | null;
+  error?: string | null;
+}
+
+export interface DiagnosticInfo {
+  steps: DiagnosticStep[];
+  metadata: Record<string, string>;
+  errorMessage?: string | null;
+  stackTrace?: string | null;
+}

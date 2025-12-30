@@ -110,7 +110,8 @@ public class FlyersController : ControllerBase
             return BadRequest(new FlyerUploadResponse
             {
                 Success = false,
-                Message = analysisResult.ErrorMessage ?? "Failed to analyze flyer. Could not extract event information."
+                Message = analysisResult.ErrorMessage ?? "Failed to analyze flyer. Could not extract event information.",
+                Diagnostics = analysisResult.Diagnostics
             });
         }
 
@@ -295,13 +296,15 @@ public class FlyersController : ControllerBase
             return BadRequest(new AutoPopulateResult
             {
                 Success = false,
-                Message = analysisResult.ErrorMessage ?? "Failed to analyze flyer"
+                Message = analysisResult.ErrorMessage ?? "Failed to analyze flyer",
+                Diagnostics = analysisResult.Diagnostics
             });
         }
 
         var result = new AutoPopulateResult
         {
             Success = true,
+            Diagnostics = analysisResult.Diagnostics,
             Message = "Successfully analyzed flyer"
         };
 
@@ -613,6 +616,7 @@ public class AutoPopulateResult
     public int VenuesCreated { get; set; }
     public int ActsCreated { get; set; }
     public List<string> Errors { get; set; } = new();
+    public DiagnosticInfo? Diagnostics { get; set; }
 }
 
 public class FlyerUploadResponse
@@ -621,4 +625,5 @@ public class FlyerUploadResponse
     public string Message { get; set; } = string.Empty;
     public Flyer? Flyer { get; set; }
     public AutoPopulateResult? AutoPopulateResult { get; set; }
+    public DiagnosticInfo? Diagnostics { get; set; }
 }

@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Google.GenAI;
 using Google.GenAI.Types;
+using WasThere.Api.Models;
 
 namespace WasThere.Api.Services;
 
@@ -25,24 +27,61 @@ public class GoogleGeminiService : IGoogleGeminiService
 
     public async Task<FlyerAnalysisResult> AnalyzeFlyerImageAsync(string imagePath)
     {
+        var diagnostics = new DiagnosticInfo();
+        var overallStopwatch = Stopwatch.StartNew();
+        
         try
         {
+            diagnostics.Metadata["ImagePath"] = imagePath;
+            diagnostics.Metadata["Timestamp"] = DateTime.UtcNow.ToString("o");
+            
             // Check if API key is configured
+            var checkKeyStep = new DiagnosticStep 
+            { 
+                Name = "API Key Check",
+                Timestamp = DateTime.UtcNow,
+                Status = "started"
+            };
+            diagnostics.Steps.Add(checkKeyStep);
+            
             if (string.IsNullOrEmpty(_apiKey) || _client == null)
             {
+                checkKeyStep.Status = "failed";
+                checkKeyStep.Error = "API key not configured";
+                
                 _logger.LogError("Google Gemini API key is not configured");
                 return new FlyerAnalysisResult
                 {
                     Success = false,
-                    ErrorMessage = "Google Gemini API key is not configured. Please set GoogleGemini:ApiKey in configuration."
+                    ErrorMessage = "Google Gemini API key is not configured. Please set GoogleGemini:ApiKey in configuration.",
+                    Diagnostics = diagnostics
                 };
             }
+            
+            checkKeyStep.Status = "completed";
+            diagnostics.Metadata["APIKeyConfigured"] = "true";
 
             // Read image bytes
+            var readFileStep = new DiagnosticStep
+            {
+                Name = "Read Image File",
+                Timestamp = DateTime.UtcNow,
+                Status = "started"
+            };
+            diagnostics.Steps.Add(readFileStep);
+            
+            var readStopwatch = Stopwatch.StartNew();
             var imageBytes = await System.IO.File.ReadAllBytesAsync(imagePath);
+            readStopwatch.Stop();
+            
+            readFileStep.Status = "completed";
+            readFileStep.DurationMs = readStopwatch.ElapsedMilliseconds;
+            readFileStep.Details = $"Read {imageBytes.Length} bytes";
+            diagnostics.Metadata["ImageSizeBytes"] = imageBytes.Length.ToString();
             
             // Determine MIME type from file extension
             var mimeType = GetMimeType(imagePath);
+            diagnostics.Metadata["MimeType"] = mimeType;
 
             // Construct the prompt for analyzing the flyer
             var prompt = @"Analyze this club/event flyer image and extract the following information in JSON format:
@@ -92,6 +131,14 @@ Important instructions:
 Please analyze the flyer and return the JSON:";
 
             // Create the request content with text and image using the SDK
+            var prepareRequestStep = new DiagnosticStep
+            {
+                Name = "Prepare Gemini Request",
+                Timestamp = DateTime.UtcNow,
+                Status = "started"
+            };
+            diagnostics.Steps.Add(prepareRequestStep);
+            
             var content = new Content();
             content.Parts ??= new List<Part>();
             content.Parts.Add(new Part { Text = prompt });
@@ -103,53 +150,125 @@ Please analyze the flyer and return the JSON:";
                     Data = imageBytes
                 }
             });
+            
+            prepareRequestStep.Status = "completed";
+            diagnostics.Metadata["GeminiModel"] = "gemini-2.5-flash";
 
             // Call the Gemini API using the SDK
+            var apiCallStep = new DiagnosticStep
+            {
+                Name = "Call Gemini API",
+                Timestamp = DateTime.UtcNow,
+                Status = "started"
+            };
+            diagnostics.Steps.Add(apiCallStep);
+            
             GenerateContentResponse response;
+            var apiStopwatch = Stopwatch.StartNew();
             try
             {
                 response = await _client.Models.GenerateContentAsync(
                     model: "gemini-2.5-flash",
                     contents: content
                 );
+                apiStopwatch.Stop();
+                
+                apiCallStep.Status = "completed";
+                apiCallStep.DurationMs = apiStopwatch.ElapsedMilliseconds;
+                apiCallStep.Details = $"API responded in {apiCallStep.DurationMs}ms";
+                diagnostics.Metadata["GeminiResponseReceived"] = "true";
             }
             catch (Exception ex)
             {
+                apiStopwatch.Stop();
+                apiCallStep.Status = "failed";
+                apiCallStep.DurationMs = apiStopwatch.ElapsedMilliseconds;
+                apiCallStep.Error = ex.Message;
+                diagnostics.ErrorMessage = $"Error calling Gemini API: {ex.Message}";
+                diagnostics.StackTrace = ex.StackTrace;
+                
                 _logger.LogError(ex, "Error calling Gemini API");
                 return new FlyerAnalysisResult
                 {
                     Success = false,
-                    ErrorMessage = $"Error calling Gemini API: {ex.Message}"
+                    ErrorMessage = $"Error calling Gemini API: {ex.Message}",
+                    Diagnostics = diagnostics
                 };
             }
 
             // Check if we have a valid response
+            var validateResponseStep = new DiagnosticStep
+            {
+                Name = "Validate API Response",
+                Timestamp = DateTime.UtcNow,
+                Status = "started"
+            };
+            diagnostics.Steps.Add(validateResponseStep);
+            
             if (response?.Candidates == null || response.Candidates.Count == 0)
             {
+                validateResponseStep.Status = "failed";
+                validateResponseStep.Error = "No candidates in response";
+                diagnostics.Metadata["ResponseHasCandidates"] = "false";
+                
                 _logger.LogWarning("No candidates in Gemini response");
                 return new FlyerAnalysisResult
                 {
                     Success = false,
-                    ErrorMessage = "No analysis results returned from AI"
+                    ErrorMessage = "No analysis results returned from AI",
+                    Diagnostics = diagnostics
                 };
             }
+            
+            validateResponseStep.Status = "completed";
+            diagnostics.Metadata["ResponseCandidatesCount"] = response.Candidates.Count.ToString();
 
             // Extract text from response
+            var extractTextStep = new DiagnosticStep
+            {
+                Name = "Extract Text from Response",
+                Timestamp = DateTime.UtcNow,
+                Status = "started"
+            };
+            diagnostics.Steps.Add(extractTextStep);
+            
             var textResponse = response.Candidates[0]?.Content?.Parts?.FirstOrDefault()?.Text;
             
             if (string.IsNullOrEmpty(textResponse))
             {
+                extractTextStep.Status = "failed";
+                extractTextStep.Error = "Empty text response";
+                diagnostics.Metadata["ResponseTextEmpty"] = "true";
+                
                 _logger.LogWarning("Empty text response from Gemini");
                 return new FlyerAnalysisResult
                 {
                     Success = false,
-                    ErrorMessage = "Empty response from AI"
+                    ErrorMessage = "Empty response from AI",
+                    Diagnostics = diagnostics
                 };
             }
+            
+            extractTextStep.Status = "completed";
+            extractTextStep.Details = $"Extracted {textResponse.Length} characters";
+            diagnostics.Metadata["ResponseTextLength"] = textResponse.Length.ToString();
 
             _logger.LogInformation("Gemini raw response: {Response}", textResponse);
+            
+            // Store first 500 chars of response for diagnostics
+            diagnostics.Metadata["ResponsePreview"] = textResponse.Length > 500 
+                ? textResponse.Substring(0, 500) + "..." 
+                : textResponse;
 
             // Clean up the response - sometimes AI returns markdown code blocks
+            var cleanResponseStep = new DiagnosticStep
+            {
+                Name = "Clean Response Text",
+                Timestamp = DateTime.UtcNow,
+                Status = "started"
+            };
+            diagnostics.Steps.Add(cleanResponseStep);
+            
             textResponse = textResponse.Trim();
             if (textResponse.StartsWith("```json"))
             {
@@ -164,36 +283,79 @@ Please analyze the flyer and return the JSON:";
                 textResponse = textResponse.Substring(0, textResponse.Length - 3);
             }
             textResponse = textResponse.Trim();
+            
+            cleanResponseStep.Status = "completed";
 
             // Parse the JSON response
-            var analysisData = JsonSerializer.Deserialize<FlyerAnalysisData>(textResponse, new JsonSerializerOptions
+            var parseJsonStep = new DiagnosticStep
             {
-                PropertyNameCaseInsensitive = true
-            });
+                Name = "Parse JSON Response",
+                Timestamp = DateTime.UtcNow,
+                Status = "started"
+            };
+            diagnostics.Steps.Add(parseJsonStep);
+            
+            FlyerAnalysisData? analysisData;
+            try
+            {
+                analysisData = JsonSerializer.Deserialize<FlyerAnalysisData>(textResponse, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                parseJsonStep.Status = "completed";
+            }
+            catch (Exception ex)
+            {
+                parseJsonStep.Status = "failed";
+                parseJsonStep.Error = ex.Message;
+                diagnostics.ErrorMessage = $"Failed to parse JSON: {ex.Message}";
+                
+                _logger.LogError(ex, "Failed to parse Gemini response as JSON");
+                return new FlyerAnalysisResult
+                {
+                    Success = false,
+                    ErrorMessage = $"Failed to parse AI response as JSON: {ex.Message}",
+                    Diagnostics = diagnostics
+                };
+            }
 
             if (analysisData?.ClubNights == null || analysisData.ClubNights.Count == 0)
             {
+                diagnostics.Metadata["ClubNightsFound"] = "0";
+                
                 _logger.LogWarning("No club nights found in analysis");
                 return new FlyerAnalysisResult
                 {
                     Success = false,
-                    ErrorMessage = "No club nights found in flyer"
+                    ErrorMessage = "No club nights found in flyer",
+                    Diagnostics = diagnostics
                 };
             }
+            
+            diagnostics.Metadata["ClubNightsFound"] = analysisData.ClubNights.Count.ToString();
+            overallStopwatch.Stop();
+            diagnostics.Metadata["TotalDurationMs"] = overallStopwatch.ElapsedMilliseconds.ToString();
 
             return new FlyerAnalysisResult
             {
                 Success = true,
-                ClubNights = analysisData.ClubNights
+                ClubNights = analysisData.ClubNights,
+                Diagnostics = diagnostics
             };
         }
         catch (Exception ex)
         {
+            diagnostics.ErrorMessage = $"Error analyzing image: {ex.Message}";
+            diagnostics.StackTrace = ex.StackTrace;
+            diagnostics.Metadata["ExceptionType"] = ex.GetType().Name;
+            
             _logger.LogError(ex, "Error analyzing flyer image");
             return new FlyerAnalysisResult
             {
                 Success = false,
-                ErrorMessage = $"Error analyzing image: {ex.Message}"
+                ErrorMessage = $"Error analyzing image: {ex.Message}",
+                Diagnostics = diagnostics
             };
         }
     }

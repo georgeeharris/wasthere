@@ -1,4 +1,4 @@
-import type { Event, Venue, Act, ClubNight, ClubNightDto, Flyer } from '../types';
+import type { Event, Venue, Act, ClubNight, ClubNightDto, Flyer, DiagnosticInfo } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -210,6 +210,7 @@ export interface FlyerUploadResponse {
   message: string;
   flyer?: Flyer;
   autoPopulateResult?: AutoPopulateResult;
+  diagnostics?: DiagnosticInfo;
 }
 
 export interface AutoPopulateResult {
@@ -220,4 +221,5 @@ export interface AutoPopulateResult {
   venuesCreated: number;
   actsCreated: number;
   errors: string[];
+  diagnostics?: DiagnosticInfo;
 }

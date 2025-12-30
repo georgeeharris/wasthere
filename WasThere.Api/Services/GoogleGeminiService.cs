@@ -92,21 +92,17 @@ Important instructions:
 Please analyze the flyer and return the JSON:";
 
             // Create the request content with text and image using the SDK
-            var content = new Content
+            var content = new Content();
+            content.Parts ??= new List<Part>();
+            content.Parts.Add(new Part { Text = prompt });
+            content.Parts.Add(new Part
             {
-                Parts =
+                InlineData = new Blob
                 {
-                    new Part { Text = prompt },
-                    new Part
-                    {
-                        InlineData = new Blob
-                        {
-                            MimeType = mimeType,
-                            Data = imageBytes
-                        }
-                    }
+                    MimeType = mimeType,
+                    Data = imageBytes
                 }
-            };
+            });
 
             // Call the Gemini API using the SDK
             GenerateContentResponse response;

@@ -27,6 +27,37 @@ jobs:
     - name: Build
       run: dotnet build WasThere.Api/WasThere.Api.csproj --no-restore --configuration Release
 
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    # Only run if API key secret is available (skip on forks and when secret is not configured)
+    if: |
+      secrets.GOOGLE_GEMINI_API_KEY != '' && 
+      (github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository))
+    permissions:
+      contents: read
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore WasThere.Api.IntegrationTests/WasThere.Api.IntegrationTests.csproj
+    
+    - name: Build
+      run: dotnet build WasThere.Api.IntegrationTests/WasThere.Api.IntegrationTests.csproj --no-restore --configuration Release
+    
+    - name: Run Integration Tests
+      env:
+        GOOGLE_GEMINI_API_KEY: ${{ secrets.GOOGLE_GEMINI_API_KEY }}
+      run: |
+        cd WasThere.Api.IntegrationTests
+        dotnet test --no-build --configuration Release --logger "console;verbosity=detailed"
+
   test-web:
     name: Test React Frontend
     runs-on: ubuntu-latest

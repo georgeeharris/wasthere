@@ -48,7 +48,6 @@ public class GoogleGeminiService : IGoogleGeminiService
             {
                 checkKeyStep.Status = "failed";
                 checkKeyStep.Error = "API key not configured";
-                checkKeyStep.DurationMs = 0;
                 
                 _logger.LogError("Google Gemini API key is not configured");
                 return new FlyerAnalysisResult
@@ -60,7 +59,6 @@ public class GoogleGeminiService : IGoogleGeminiService
             }
             
             checkKeyStep.Status = "completed";
-            checkKeyStep.DurationMs = 0;
             diagnostics.Metadata["APIKeyConfigured"] = "true";
 
             // Read image bytes
@@ -154,7 +152,6 @@ Please analyze the flyer and return the JSON:";
             });
             
             prepareRequestStep.Status = "completed";
-            prepareRequestStep.DurationMs = 0;
             diagnostics.Metadata["GeminiModel"] = "gemini-2.5-flash";
 
             // Call the Gemini API using the SDK
@@ -212,7 +209,6 @@ Please analyze the flyer and return the JSON:";
             {
                 validateResponseStep.Status = "failed";
                 validateResponseStep.Error = "No candidates in response";
-                validateResponseStep.DurationMs = 0;
                 diagnostics.Metadata["ResponseHasCandidates"] = "false";
                 
                 _logger.LogWarning("No candidates in Gemini response");
@@ -225,7 +221,6 @@ Please analyze the flyer and return the JSON:";
             }
             
             validateResponseStep.Status = "completed";
-            validateResponseStep.DurationMs = 0;
             diagnostics.Metadata["ResponseCandidatesCount"] = response.Candidates.Count.ToString();
 
             // Extract text from response
@@ -243,7 +238,6 @@ Please analyze the flyer and return the JSON:";
             {
                 extractTextStep.Status = "failed";
                 extractTextStep.Error = "Empty text response";
-                extractTextStep.DurationMs = 0;
                 diagnostics.Metadata["ResponseTextEmpty"] = "true";
                 
                 _logger.LogWarning("Empty text response from Gemini");
@@ -256,7 +250,6 @@ Please analyze the flyer and return the JSON:";
             }
             
             extractTextStep.Status = "completed";
-            extractTextStep.DurationMs = 0;
             extractTextStep.Details = $"Extracted {textResponse.Length} characters";
             diagnostics.Metadata["ResponseTextLength"] = textResponse.Length.ToString();
 
@@ -292,7 +285,6 @@ Please analyze the flyer and return the JSON:";
             textResponse = textResponse.Trim();
             
             cleanResponseStep.Status = "completed";
-            cleanResponseStep.DurationMs = 0;
 
             // Parse the JSON response
             var parseJsonStep = new DiagnosticStep
@@ -312,13 +304,11 @@ Please analyze the flyer and return the JSON:";
                 });
                 
                 parseJsonStep.Status = "completed";
-                parseJsonStep.DurationMs = 0;
             }
             catch (Exception ex)
             {
                 parseJsonStep.Status = "failed";
                 parseJsonStep.Error = ex.Message;
-                parseJsonStep.DurationMs = 0;
                 diagnostics.ErrorMessage = $"Failed to parse JSON: {ex.Message}";
                 
                 _logger.LogError(ex, "Failed to parse Gemini response as JSON");

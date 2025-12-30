@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import type { DiagnosticInfo } from '../types';
 
 interface ErrorDiagnosticsProps {
@@ -7,11 +7,13 @@ interface ErrorDiagnosticsProps {
   onClose: () => void;
 }
 
+const COPY_SUCCESS_DURATION_MS = 3000;
+
 export function ErrorDiagnostics({ error, diagnostics, onClose }: ErrorDiagnosticsProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const formatDiagnostics = () => {
+  const formatDiagnostics = useCallback(() => {
     if (!diagnostics) {
       return `Error: ${error}\n\nNo diagnostic information available.`;
     }
@@ -65,14 +67,14 @@ export function ErrorDiagnostics({ error, diagnostics, onClose }: ErrorDiagnosti
     output += `Timestamp: ${new Date().toISOString()}\n`;
 
     return output;
-  };
+  }, [error, diagnostics]);
 
   const copyToClipboard = async () => {
     const diagnosticText = formatDiagnostics();
     try {
       await navigator.clipboard.writeText(diagnosticText);
       setCopied(true);
-      setTimeout(() => setCopied(false), 3000);
+      setTimeout(() => setCopied(false), COPY_SUCCESS_DURATION_MS);
     } catch (err) {
       console.error('Failed to copy:', err);
     }

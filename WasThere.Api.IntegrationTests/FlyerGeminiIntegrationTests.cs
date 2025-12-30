@@ -341,9 +341,9 @@ public class XunitLogger : ILogger
                 _output.WriteLine($"Exception: {exception}");
             }
         }
-        catch
+        catch (InvalidOperationException)
         {
-            // Ignore errors writing to output
+            // Test output may be disposed, ignore
         }
     }
 }

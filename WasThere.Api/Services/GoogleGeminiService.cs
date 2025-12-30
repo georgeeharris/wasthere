@@ -93,10 +93,7 @@ Please analyze the flyer and return the JSON:";
 
             // Create the request content with text and image using the SDK
             var content = new Content();
-            if (content.Parts == null)
-            {
-                content.Parts = new List<Part>();
-            }
+            content.Parts ??= new List<Part>();
             content.Parts.Add(new Part { Text = prompt });
             content.Parts.Add(new Part
             {

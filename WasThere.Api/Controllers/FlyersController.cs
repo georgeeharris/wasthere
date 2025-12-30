@@ -375,39 +375,42 @@ public class FlyersController : ControllerBase
                     result.ClubNightsCreated++;
 
                     // Add acts
-                    foreach (var actData in clubNightData.Acts)
+                    if (clubNightData.Acts != null)
                     {
-                        if (actData == null)
+                        foreach (var actData in clubNightData.Acts)
                         {
-                            continue;
-                        }
-                        
-                        var trimmedActName = actData.Name?.Trim();
-                        if (string.IsNullOrEmpty(trimmedActName))
-                        {
-                            continue;
-                        }
+                            if (actData == null)
+                            {
+                                continue;
+                            }
+                            
+                            var trimmedActName = actData.Name?.Trim();
+                            if (string.IsNullOrEmpty(trimmedActName))
+                            {
+                                continue;
+                            }
 
-                        // Find or create Act
-                        var existingAct = await _context.Acts
-                            .FirstOrDefaultAsync(a => a.Name.ToLower() == trimmedActName.ToLower());
-                        
-                        var actEntity = existingAct ?? new Act { Name = trimmedActName };
-                        if (existingAct == null)
-                        {
-                            _context.Acts.Add(actEntity);
-                            await _context.SaveChangesAsync();
-                            result.ActsCreated++;
-                        }
+                            // Find or create Act
+                            var existingAct = await _context.Acts
+                                .FirstOrDefaultAsync(a => a.Name.ToLower() == trimmedActName.ToLower());
+                            
+                            var actEntity = existingAct ?? new Act { Name = trimmedActName };
+                            if (existingAct == null)
+                            {
+                                _context.Acts.Add(actEntity);
+                                await _context.SaveChangesAsync();
+                                result.ActsCreated++;
+                            }
 
-                        // Link act to club night
-                        var clubNightAct = new ClubNightAct
-                        {
-                            ClubNightId = clubNight.Id,
-                            ActId = actEntity.Id,
-                            IsLiveSet = actData.IsLiveSet
-                        };
-                        _context.ClubNightActs.Add(clubNightAct);
+                            // Link act to club night
+                            var clubNightAct = new ClubNightAct
+                            {
+                                ClubNightId = clubNight.Id,
+                                ActId = actEntity.Id,
+                                IsLiveSet = actData.IsLiveSet
+                            };
+                            _context.ClubNightActs.Add(clubNightAct);
+                        }
                     }
 
                     await _context.SaveChangesAsync();
@@ -537,39 +540,42 @@ public class FlyersController : ControllerBase
                     result.ClubNightsCreated++;
 
                     // Add acts
-                    foreach (var actData in clubNightData.Acts)
+                    if (clubNightData.Acts != null)
                     {
-                        if (actData == null)
+                        foreach (var actData in clubNightData.Acts)
                         {
-                            continue;
-                        }
-                        
-                        var trimmedActName = actData.Name?.Trim();
-                        if (string.IsNullOrEmpty(trimmedActName))
-                        {
-                            continue;
-                        }
+                            if (actData == null)
+                            {
+                                continue;
+                            }
+                            
+                            var trimmedActName = actData.Name?.Trim();
+                            if (string.IsNullOrEmpty(trimmedActName))
+                            {
+                                continue;
+                            }
 
-                        // Find or create Act
-                        var existingAct = await _context.Acts
-                            .FirstOrDefaultAsync(a => a.Name.ToLower() == trimmedActName.ToLower());
-                        
-                        var actEntity = existingAct ?? new Act { Name = trimmedActName };
-                        if (existingAct == null)
-                        {
-                            _context.Acts.Add(actEntity);
-                            await _context.SaveChangesAsync();
-                            result.ActsCreated++;
-                        }
+                            // Find or create Act
+                            var existingAct = await _context.Acts
+                                .FirstOrDefaultAsync(a => a.Name.ToLower() == trimmedActName.ToLower());
+                            
+                            var actEntity = existingAct ?? new Act { Name = trimmedActName };
+                            if (existingAct == null)
+                            {
+                                _context.Acts.Add(actEntity);
+                                await _context.SaveChangesAsync();
+                                result.ActsCreated++;
+                            }
 
-                        // Link act to club night
-                        var clubNightAct = new ClubNightAct
-                        {
-                            ClubNightId = clubNight.Id,
-                            ActId = actEntity.Id,
-                            IsLiveSet = actData.IsLiveSet
-                        };
-                        _context.ClubNightActs.Add(clubNightAct);
+                            // Link act to club night
+                            var clubNightAct = new ClubNightAct
+                            {
+                                ClubNightId = clubNight.Id,
+                                ActId = actEntity.Id,
+                                IsLiveSet = actData.IsLiveSet
+                            };
+                            _context.ClubNightActs.Add(clubNightAct);
+                        }
                     }
 
                     await _context.SaveChangesAsync();

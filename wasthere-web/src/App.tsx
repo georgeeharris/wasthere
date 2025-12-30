@@ -4,9 +4,10 @@ import { EventList } from './components/EventList';
 import { VenueList } from './components/VenueList';
 import { ActList } from './components/ActList';
 import { ClubNightList } from './components/ClubNightList';
+import { FlyerList } from './components/FlyerList';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'nights' | 'master'>('nights');
+  const [activeTab, setActiveTab] = useState<'nights' | 'master' | 'flyers'>('nights');
 
   return (
     <div className="app">
@@ -20,6 +21,12 @@ function App() {
             Club Nights
           </button>
           <button
+            className={`tab ${activeTab === 'flyers' ? 'active' : ''}`}
+            onClick={() => setActiveTab('flyers')}
+          >
+            Flyers
+          </button>
+          <button
             className={`tab ${activeTab === 'master' ? 'active' : ''}`}
             onClick={() => setActiveTab('master')}
           >
@@ -31,6 +38,8 @@ function App() {
       <main className="app-main">
         {activeTab === 'nights' ? (
           <ClubNightList />
+        ) : activeTab === 'flyers' ? (
+          <FlyerList />
         ) : (
           <div className="master-lists">
             <EventList />

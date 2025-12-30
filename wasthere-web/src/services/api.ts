@@ -1,4 +1,4 @@
-import type { Event, Venue, Act, ClubNight, ClubNightDto } from '../types';
+import type { Event, Venue, Act, ClubNight, ClubNightDto, Flyer } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -123,5 +123,49 @@ export const clubNightsApi = {
     await fetch(`${API_BASE_URL}/clubnights/${id}`, {
       method: 'DELETE',
     });
+  },
+};
+
+// Flyers API
+export const flyersApi = {
+  getAll: async (): Promise<Flyer[]> => {
+    const response = await fetch(`${API_BASE_URL}/flyers`);
+    return response.json();
+  },
+  
+  upload: async (
+    file: File,
+    eventId: number,
+    venueId: number,
+    earliestClubNightDate: string
+  ): Promise<Flyer> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('eventId', eventId.toString());
+    formData.append('venueId', venueId.toString());
+    formData.append('earliestClubNightDate', earliestClubNightDate);
+
+    const response = await fetch(`${API_BASE_URL}/flyers/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to upload flyer');
+    }
+
+    return response.json();
+  },
+  
+  delete: async (id: number): Promise<void> => {
+    await fetch(`${API_BASE_URL}/flyers/${id}`, {
+      method: 'DELETE',
+    });
+  },
+  
+  getImageUrl: (filePath: string): string => {
+    // Convert relative path to API URL
+    return `${API_BASE_URL.replace('/api', '')}/${filePath.replace(/\\/g, '/')}`;
   },
 };

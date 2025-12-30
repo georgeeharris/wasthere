@@ -29,3 +29,15 @@ export interface ClubNightDto {
   venueId: number;
   actIds: number[];
 }
+
+export interface Flyer {
+  id: number;
+  filePath: string;
+  fileName: string;
+  uploadedAt: string;
+  eventId: number;
+  event?: Event;
+  venueId: number;
+  venue?: Venue;
+  earliestClubNightDate: string;
+}

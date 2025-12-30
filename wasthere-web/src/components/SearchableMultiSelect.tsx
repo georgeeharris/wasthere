@@ -55,9 +55,16 @@ export function SearchableMultiSelect({
     onChange(selectedIds.filter((id) => id !== optionId));
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      setIsOpen(!isOpen);
+    }
+  };
+
   return (
     <div className="searchable-multiselect" ref={containerRef}>
-      <div className="multiselect-control" onClick={() => setIsOpen(!isOpen)}>
+      <div className="multiselect-control" onClick={() => setIsOpen(!isOpen)} onKeyDown={handleKeyDown} role="button" tabIndex={0} aria-expanded={isOpen} aria-label="Select acts">
         {selectedOptions.length === 0 ? (
           <span className="multiselect-placeholder">{placeholder}</span>
         ) : (
@@ -72,6 +79,7 @@ export function SearchableMultiSelect({
                     e.stopPropagation();
                     removeOption(option.id);
                   }}
+                  aria-label={`Remove ${option.name}`}
                 >
                   ×
                 </button>
@@ -83,7 +91,7 @@ export function SearchableMultiSelect({
       </div>
 
       {isOpen && (
-        <div className="multiselect-dropdown">
+        <div className="multiselect-dropdown" role="listbox">
           <div className="search-box">
             <input
               type="text"
@@ -92,6 +100,7 @@ export function SearchableMultiSelect({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onClick={(e) => e.stopPropagation()}
+              aria-label="Search acts"
             />
           </div>
           <div className="options-list">

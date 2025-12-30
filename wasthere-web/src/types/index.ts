@@ -13,6 +13,12 @@ export interface Act {
   name: string;
 }
 
+export interface ClubNightAct {
+  actId: number;
+  actName: string;
+  isLiveSet: boolean;
+}
+
 export interface ClubNight {
   id: number;
   date: string;
@@ -20,14 +26,19 @@ export interface ClubNight {
   eventName: string;
   venueId: number;
   venueName: string;
-  acts: { actId: number; actName: string }[];
+  acts: ClubNightAct[];
+}
+
+export interface ClubNightActDto {
+  actId: number;
+  isLiveSet: boolean;
 }
 
 export interface ClubNightDto {
   date: string;
   eventId: number;
   venueId: number;
-  actIds: number[];
+  acts: ClubNightActDto[];
 }
 
 export interface Flyer {

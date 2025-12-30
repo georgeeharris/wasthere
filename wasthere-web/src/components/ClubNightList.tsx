@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import type { ClubNight, Event, Venue, Act } from '../types';
+import type { ClubNight, Event, Venue, Act, ClubNightActDto } from '../types';
 import { clubNightsApi, eventsApi, venuesApi, actsApi } from '../services/api';
-import { SearchableMultiSelect } from './SearchableMultiSelect';
+import { ActSelector } from './ActSelector';
 
 export function ClubNightList() {
   const [clubNights, setClubNights] = useState<ClubNight[]>([]);
@@ -15,7 +15,7 @@ export function ClubNightList() {
     date: '2005-01-07', // First Friday in 2005
     eventId: 0,
     venueId: 0,
-    actIds: [] as number[],
+    acts: [] as ClubNightActDto[],
   });
 
   useEffect(() => {
@@ -73,7 +73,7 @@ export function ClubNightList() {
       date: clubNight.date.split('T')[0],
       eventId: clubNight.eventId,
       venueId: clubNight.venueId,
-      actIds: clubNight.acts.map(a => a.actId),
+      acts: clubNight.acts.map(a => ({ actId: a.actId, isLiveSet: a.isLiveSet })),
     });
     setShowForm(true);
   };
@@ -85,7 +85,7 @@ export function ClubNightList() {
       date: '2005-01-07', // First Friday in 2005
       eventId: 0,
       venueId: 0,
-      actIds: [],
+      acts: [],
     });
   };
 
@@ -160,10 +160,10 @@ export function ClubNightList() {
 
           <div className="form-group">
             <label>Acts</label>
-            <SearchableMultiSelect
-              options={acts}
-              selectedIds={formData.actIds}
-              onChange={(actIds) => setFormData({ ...formData, actIds })}
+            <ActSelector
+              availableActs={acts}
+              selectedActs={formData.acts}
+              onChange={(acts) => setFormData({ ...formData, acts })}
               placeholder="Select acts..."
             />
           </div>
@@ -198,7 +198,10 @@ export function ClubNightList() {
                   <h4>Line-up:</h4>
                   <ul className="acts-list">
                     {clubNight.acts.map((act) => (
-                      <li key={act.actId}>{act.actName}</li>
+                      <li key={act.actId}>
+                        {act.actName}
+                        {act.isLiveSet && <span className="live-indicator"> (live)</span>}
+                      </li>
                     ))}
                   </ul>
                 </div>

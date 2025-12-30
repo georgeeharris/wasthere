@@ -300,6 +300,12 @@
   color: #333;
 }
 
+.live-indicator {
+  color: #ff6b6b;
+  font-weight: 600;
+  font-style: italic;
+}
+
 .club-night-actions {
   display: flex;
   gap: 0.5rem;

@@ -1,7 +1,7 @@
 # Auto-Populate Feature Implementation Summary
 
 ## Overview
-This implementation adds AI-powered automatic population of events, acts, clubs, and club nights from flyer images using Google's Gemini 2.0 Flash AI model.
+This implementation adds AI-powered automatic population of events, acts, clubs, and club nights from flyer images using Google's Gemini 1.5 Flash AI model.
 
 ## Implementation Details
 

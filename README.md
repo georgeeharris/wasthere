@@ -141,7 +141,7 @@ The frontend will start at `http://localhost:5173`
 
 ### AI-Powered Auto-Population
 
-The application uses Google's Gemini 2.0 Flash AI to automatically extract information from flyer images:
+The application uses Google's Gemini 1.5 Flash AI to automatically extract information from flyer images:
 
 - **Configuration**: Set `GoogleGemini:ApiKey` in `appsettings.json` or via environment variable
 - **Features**:

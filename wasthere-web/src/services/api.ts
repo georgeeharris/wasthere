@@ -137,17 +137,32 @@ export const flyersApi = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${API_BASE_URL}/flyers/upload`, {
-      method: 'POST',
-      body: formData,
-    });
+    // Create an AbortController with a 5-minute timeout for AI processing
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || 'Failed to upload flyer');
+    try {
+      const response = await fetch(`${API_BASE_URL}/flyers/upload`, {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to upload flyer');
+      }
+
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timed out. The AI analysis is taking longer than expected. Please try again.');
+      }
+      throw error;
     }
-
-    return response.json();
   },
   
   delete: async (id: number): Promise<void> => {
@@ -157,16 +172,31 @@ export const flyersApi = {
   },
   
   autoPopulate: async (id: number): Promise<AutoPopulateResult> => {
-    const response = await fetch(`${API_BASE_URL}/flyers/${id}/auto-populate`, {
-      method: 'POST',
-    });
+    // Create an AbortController with a 5-minute timeout for AI processing
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(errorText || 'Failed to auto-populate from flyer');
+    try {
+      const response = await fetch(`${API_BASE_URL}/flyers/${id}/auto-populate`, {
+        method: 'POST',
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to auto-populate from flyer');
+      }
+
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timed out. The AI analysis is taking longer than expected. Please try again.');
+      }
+      throw error;
     }
-
-    return response.json();
   },
   
   getImageUrl: (filePath: string): string => {

@@ -6,6 +6,15 @@ using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure Kestrel to allow longer request timeouts for AI processing
+// Google Gemini API can take 20-60+ seconds to analyze high-resolution images
+// Setting 5-minute timeout to provide sufficient buffer for legitimate long operations
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(5);
+    serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
+});
+
 // Add services to the container
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -14,6 +23,14 @@ builder.Services.AddControllers()
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Configure HttpClient for potential future long-running operations
+// Note: Currently, the Google.GenAI SDK uses its own internal HttpClient,
+// so this configuration is not actively used but is available for future extensibility
+builder.Services.AddHttpClient("LongRunning", client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
 
 // Add Google Gemini service
 builder.Services.AddSingleton<IGoogleGeminiService, GoogleGeminiService>();

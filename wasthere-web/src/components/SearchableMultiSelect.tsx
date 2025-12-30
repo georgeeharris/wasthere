@@ -92,7 +92,6 @@ export function SearchableMultiSelect({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onClick={(e) => e.stopPropagation()}
-              autoFocus
             />
           </div>
           <div className="options-list">
@@ -100,8 +99,9 @@ export function SearchableMultiSelect({
               <div className="no-options">No acts found</div>
             ) : (
               filteredOptions.map((option) => (
-                <label key={option.id} className="option-item">
+                <label key={option.id} className="option-item" htmlFor={`act-${option.id}`}>
                   <input
+                    id={`act-${option.id}`}
                     type="checkbox"
                     checked={selectedIds.includes(option.id)}
                     onChange={() => toggleOption(option.id)}

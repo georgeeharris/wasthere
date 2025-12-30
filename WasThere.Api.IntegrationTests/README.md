@@ -25,16 +25,17 @@ The integration tests in this project are designed to:
 # Set the API key as an environment variable
 export GOOGLE_GEMINI_API_KEY="your-api-key-here"
 
-# Or use the one from appsettings.json (already set)
-export GOOGLE_GEMINI_API_KEY="AIzaSyBWz6nv-fjmX3vpzxgmO1rTA8I9G0JFhMA"
+# Navigate to test project
+cd WasThere.Api.IntegrationTests
 
 # Run all tests
-cd WasThere.Api.IntegrationTests
 dotnet test
 
 # Run specific test with detailed output
 dotnet test --filter "FullyQualifiedName~DiagnoseNullReferenceException" --logger "console;verbosity=detailed"
 ```
+
+**Note:** A test API key is configured in `WasThere.Api/appsettings.json` for local development. You can use that for testing, but for production use, always use environment variables or user secrets.
 
 ### Running in GitHub Actions
 

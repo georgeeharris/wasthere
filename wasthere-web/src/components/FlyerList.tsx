@@ -1,15 +1,10 @@
 import { useState, useEffect } from 'react';
-import type { Flyer, Event, Venue } from '../types';
-import { flyersApi, eventsApi, venuesApi, type AutoPopulateResult } from '../services/api';
+import type { Flyer } from '../types';
+import { flyersApi, type AutoPopulateResult } from '../services/api';
 
 export function FlyerList() {
   const [flyers, setFlyers] = useState<Flyer[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
-  const [venues, setVenues] = useState<Venue[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [selectedEventId, setSelectedEventId] = useState<number | ''>('');
-  const [selectedVenueId, setSelectedVenueId] = useState<number | ''>('');
-  const [earliestDate, setEarliestDate] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [autoPopulating, setAutoPopulating] = useState<number | null>(null);
@@ -17,8 +12,6 @@ export function FlyerList() {
 
   useEffect(() => {
     loadFlyers();
-    loadEvents();
-    loadVenues();
   }, []);
 
   const loadFlyers = async () => {
@@ -30,24 +23,6 @@ export function FlyerList() {
     } catch (error) {
       console.error('Failed to load flyers:', error);
       setError('Failed to load flyers');
-    }
-  };
-
-  const loadEvents = async () => {
-    try {
-      const data = await eventsApi.getAll();
-      setEvents(data);
-    } catch (error) {
-      console.error('Failed to load events:', error);
-    }
-  };
-
-  const loadVenues = async () => {
-    try {
-      const data = await venuesApi.getAll();
-      setVenues(data);
-    } catch (error) {
-      console.error('Failed to load venues:', error);
     }
   };
 
@@ -65,35 +40,40 @@ export function FlyerList() {
       setError('Please select a file');
       return;
     }
-    
-    if (selectedEventId === '' || selectedVenueId === '' || !earliestDate) {
-      setError('Please fill in all fields');
-      return;
-    }
 
     setUploading(true);
     setError(null);
+    setSuccessMessage(null);
 
     try {
-      await flyersApi.upload(
-        selectedFile,
-        Number(selectedEventId),
-        Number(selectedVenueId),
-        earliestDate
-      );
+      const result = await flyersApi.upload(selectedFile);
       
-      // Reset form
-      setSelectedFile(null);
-      setSelectedEventId('');
-      setSelectedVenueId('');
-      setEarliestDate('');
-      
-      // Reset file input
-      const fileInput = document.getElementById('flyer-file') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
-      
-      // Reload flyers
-      await loadFlyers();
+      if (result.success) {
+        // Show success message with details
+        const autoPopResult = result.autoPopulateResult;
+        if (autoPopResult) {
+          setSuccessMessage(
+            `Flyer uploaded and analyzed! ${autoPopResult.message}`
+          );
+        } else {
+          setSuccessMessage('Flyer uploaded successfully!');
+        }
+        
+        // Reset form
+        setSelectedFile(null);
+        
+        // Reset file input
+        const fileInput = document.getElementById('flyer-file') as HTMLInputElement;
+        if (fileInput) fileInput.value = '';
+        
+        // Reload flyers
+        await loadFlyers();
+        
+        // Clear success message after 10 seconds
+        setTimeout(() => setSuccessMessage(null), 10000);
+      } else {
+        setError(result.message || 'Failed to upload flyer');
+      }
     } catch (error) {
       console.error('Failed to upload flyer:', error);
       setError(error instanceof Error ? error.message : 'Failed to upload flyer');
@@ -166,62 +146,23 @@ export function FlyerList() {
             )}
           </div>
 
-          <div className="form-group">
-            <label htmlFor="flyer-event">Event</label>
-            <select
-              id="flyer-event"
-              value={selectedEventId}
-              onChange={(e) => setSelectedEventId(e.target.value ? Number(e.target.value) : '')}
-              className="input"
-              required
-            >
-              <option value="">Select an event...</option>
-              {events.map((event) => (
-                <option key={event.id} value={event.id}>
-                  {event.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="flyer-venue">Venue</label>
-            <select
-              id="flyer-venue"
-              value={selectedVenueId}
-              onChange={(e) => setSelectedVenueId(e.target.value ? Number(e.target.value) : '')}
-              className="input"
-              required
-            >
-              <option value="">Select a venue...</option>
-              {venues.map((venue) => (
-                <option key={venue.id} value={venue.id}>
-                  {venue.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="flyer-date">Earliest Club Night Date</label>
-            <input
-              id="flyer-date"
-              type="date"
-              value={earliestDate}
-              onChange={(e) => setEarliestDate(e.target.value)}
-              className="input"
-              required
-            />
-          </div>
-
           <div className="form-actions">
             <button 
               type="submit" 
               className="btn btn-primary"
               disabled={uploading || !selectedFile}
             >
-              {uploading ? 'Uploading...' : 'Upload Flyer'}
+              {uploading ? 'Uploading and Analyzing...' : 'Upload and Analyze Flyer'}
             </button>
+          </div>
+          
+          <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
+            <p>The flyer will be automatically analyzed to extract:</p>
+            <ul style={{ marginLeft: '1.5rem', marginTop: '0.5rem' }}>
+              <li>Event and venue information</li>
+              <li>Event dates (with automatic year inference)</li>
+              <li>Performing acts/DJs</li>
+            </ul>
           </div>
         </form>
       </div>
@@ -251,8 +192,9 @@ export function FlyerList() {
                     onClick={() => handleAutoPopulate(flyer.id)} 
                     className="btn btn-small btn-primary"
                     disabled={autoPopulating === flyer.id}
+                    title="Re-analyze flyer to extract additional information"
                   >
-                    {autoPopulating === flyer.id ? 'Analyzing...' : 'Auto-populate'}
+                    {autoPopulating === flyer.id ? 'Analyzing...' : 'Analyze'}
                   </button>
                   <button 
                     onClick={() => handleDelete(flyer.id)} 

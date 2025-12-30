@@ -133,17 +133,9 @@ export const flyersApi = {
     return response.json();
   },
   
-  upload: async (
-    file: File,
-    eventId: number,
-    venueId: number,
-    earliestClubNightDate: string
-  ): Promise<Flyer> => {
+  upload: async (file: File): Promise<FlyerUploadResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('eventId', eventId.toString());
-    formData.append('venueId', venueId.toString());
-    formData.append('earliestClubNightDate', earliestClubNightDate);
 
     const response = await fetch(`${API_BASE_URL}/flyers/upload`, {
       method: 'POST',
@@ -182,6 +174,13 @@ export const flyersApi = {
     return `${API_BASE_URL.replace('/api', '')}/${filePath.replace(/\\/g, '/')}`;
   },
 };
+
+export interface FlyerUploadResponse {
+  success: boolean;
+  message: string;
+  flyer?: Flyer;
+  autoPopulateResult?: AutoPopulateResult;
+}
 
 export interface AutoPopulateResult {
   success: boolean;

@@ -48,7 +48,10 @@ public class GoogleGeminiService : IGoogleGeminiService
     {
       ""eventName"": ""The event name (e.g., 'Fabric', 'Ministry of Sound')"",
       ""venueName"": ""The venue name"",
-      ""date"": ""The date in ISO format (YYYY-MM-DD)"",
+      ""date"": ""The FULL date in ISO format (YYYY-MM-DD) if year is visible, otherwise null"",
+      ""dayOfWeek"": ""Day of week if visible (e.g., 'Friday', 'Saturday') - IMPORTANT for date inference"",
+      ""month"": numeric month (1-12) if visible,
+      ""day"": numeric day of month (1-31) if visible,
       ""acts"": [
         {
           ""name"": ""Act name without performance type indicators"",
@@ -72,9 +75,15 @@ Important instructions:
    - Set isLiveSet to true if the act has indicators like '(live)', '(live set)', '(live PA)', 'live', or similar
    - Set isLiveSet to false if it has '(DJ set)', '(DJ)', or no indicator (default to DJ set)
    - Remove the performance type indicators from the name (e.g., 'Dave Clarke (live)' should be just 'Dave Clarke')
-7. If multiple dates are shown, create separate entries for each date
-8. Only extract information that is clearly visible in the flyer
-9. Return ONLY valid JSON, no additional text or markdown
+7. **DATE EXTRACTION**:
+   - If the full date with year is visible (e.g., '27 May 2003'), provide it in the 'date' field as 'YYYY-MM-DD'
+   - If only partial date is visible (e.g., 'Friday 27th May' without year), set 'date' to null and provide:
+     * 'dayOfWeek': the day name if visible (very important for inferring year)
+     * 'month': the numeric month (1-12)
+     * 'day': the numeric day of month (1-31)
+8. If multiple dates are shown, create separate entries for each date
+9. Only extract information that is clearly visible in the flyer
+10. Return ONLY valid JSON, no additional text or markdown
 
 Please analyze the flyer and return the JSON:";
 

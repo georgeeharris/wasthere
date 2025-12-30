@@ -145,20 +145,19 @@ export function ActSelector({
                       />
                       <span>{act.name}</span>
                     </label>
-                    {isSelected && (
-                      <label className="live-set-label" htmlFor={`live-${act.id}`}>
-                        <input
-                          id={`live-${act.id}`}
-                          type="checkbox"
-                          checked={selectedAct?.isLiveSet || false}
-                          onChange={(e) => {
-                            e.stopPropagation();
-                            toggleLiveSet(act.id);
-                          }}
-                        />
-                        <span>Live</span>
-                      </label>
-                    )}
+                    <label className="live-set-label" htmlFor={`live-${act.id}`}>
+                      <input
+                        id={`live-${act.id}`}
+                        type="checkbox"
+                        checked={selectedAct?.isLiveSet || false}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleLiveSet(act.id);
+                        }}
+                        disabled={!isSelected}
+                      />
+                      <span>Live</span>
+                    </label>
                   </div>
                 );
               })

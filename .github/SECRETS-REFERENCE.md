@@ -72,6 +72,11 @@ VITE_API_URL: https://api.yourdomain.com/api
 WEB_PORT: 443
 ```
 
+**Important for Production:**
+- **Always set `CORS_ORIGINS`** to your actual domain(s) to prevent CORS errors
+- For production with HTTPS, use only HTTPS origins for better security: `CORS_ORIGINS: https://yourdomain.com`
+- The default localhost values are only suitable for development environments
+
 ## Verifying Secrets
 
 After adding secrets, verify them:

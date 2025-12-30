@@ -109,7 +109,7 @@ Please analyze the flyer and return the JSON:";
             try
             {
                 response = await _client.Models.GenerateContentAsync(
-                    model: "gemini-2.5-pro",
+                    model: "gemini-2.5-flash",
                     contents: content
                 );
             }

@@ -286,9 +286,14 @@ public class FlyersController : ControllerBase
                     result.ClubNightsCreated++;
 
                     // Add acts
-                    foreach (var actName in clubNightData.Acts)
+                    foreach (var actData in clubNightData.Acts)
                     {
-                        var trimmedActName = actName?.Trim();
+                        if (actData == null)
+                        {
+                            continue;
+                        }
+                        
+                        var trimmedActName = actData.Name?.Trim();
                         if (string.IsNullOrEmpty(trimmedActName))
                         {
                             continue;
@@ -310,7 +315,8 @@ public class FlyersController : ControllerBase
                         var clubNightAct = new ClubNightAct
                         {
                             ClubNightId = clubNight.Id,
-                            ActId = actEntity.Id
+                            ActId = actEntity.Id,
+                            IsLiveSet = actData.IsLiveSet
                         };
                         _context.ClubNightActs.Add(clubNightAct);
                     }

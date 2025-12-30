@@ -35,7 +35,8 @@ public class ClubNightsController : ControllerBase
                 Acts = cn.ClubNightActs.Select(cna => new
                 {
                     cna.ActId,
-                    ActName = cna.Act!.Name
+                    ActName = cna.Act!.Name,
+                    cna.IsLiveSet
                 }).ToList()
             })
             .ToListAsync();
@@ -63,7 +64,8 @@ public class ClubNightsController : ControllerBase
                 Acts = cn.ClubNightActs.Select(cna => new
                 {
                     cna.ActId,
-                    ActName = cna.Act!.Name
+                    ActName = cna.Act!.Name,
+                    cna.IsLiveSet
                 }).ToList()
             })
             .FirstOrDefaultAsync();
@@ -90,14 +92,15 @@ public class ClubNightsController : ControllerBase
         await _context.SaveChangesAsync();
 
         // Add acts
-        if (dto.ActIds != null && dto.ActIds.Any())
+        if (dto.Acts != null && dto.Acts.Any())
         {
-            foreach (var actId in dto.ActIds)
+            foreach (var act in dto.Acts)
             {
                 _context.ClubNightActs.Add(new ClubNightAct
                 {
                     ClubNightId = clubNight.Id,
-                    ActId = actId
+                    ActId = act.ActId,
+                    IsLiveSet = act.IsLiveSet
                 });
             }
             await _context.SaveChangesAsync();
@@ -125,14 +128,15 @@ public class ClubNightsController : ControllerBase
         // Update acts
         _context.ClubNightActs.RemoveRange(clubNight.ClubNightActs);
         
-        if (dto.ActIds != null && dto.ActIds.Any())
+        if (dto.Acts != null && dto.Acts.Any())
         {
-            foreach (var actId in dto.ActIds)
+            foreach (var act in dto.Acts)
             {
                 _context.ClubNightActs.Add(new ClubNightAct
                 {
                     ClubNightId = clubNight.Id,
-                    ActId = actId
+                    ActId = act.ActId,
+                    IsLiveSet = act.IsLiveSet
                 });
             }
         }
@@ -163,5 +167,11 @@ public class ClubNightDto
     public DateTime Date { get; set; }
     public int EventId { get; set; }
     public int VenueId { get; set; }
-    public List<int>? ActIds { get; set; }
+    public List<ClubNightActDto>? Acts { get; set; }
+}
+
+public class ClubNightActDto
+{
+    public int ActId { get; set; }
+    public bool IsLiveSet { get; set; }
 }

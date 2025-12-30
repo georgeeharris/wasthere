@@ -17,5 +17,11 @@ public class ClubNightData
     public string? EventName { get; set; }
     public string? VenueName { get; set; }
     public DateTime? Date { get; set; }
-    public List<string> Acts { get; set; } = new();
+    public List<ActData> Acts { get; set; } = new();
+}
+
+public class ActData
+{
+    public string Name { get; set; } = string.Empty;
+    public bool IsLiveSet { get; set; }
 }

@@ -7,4 +7,6 @@ public class ClubNightAct
     
     public int ActId { get; set; }
     public Act? Act { get; set; }
+    
+    public bool IsLiveSet { get; set; }
 }

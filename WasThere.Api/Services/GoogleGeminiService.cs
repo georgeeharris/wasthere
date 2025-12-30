@@ -1,21 +1,30 @@
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Google.GenAI;
+using Google.GenAI.Types;
 
 namespace WasThere.Api.Services;
 
 public class GoogleGeminiService : IGoogleGeminiService
 {
-    private readonly HttpClient _httpClient;
+    private readonly Client _client;
     private readonly ILogger<GoogleGeminiService> _logger;
     private readonly string _apiKey;
-    private const string GeminiApiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
 
-    public GoogleGeminiService(HttpClient httpClient, IConfiguration configuration, ILogger<GoogleGeminiService> logger)
+    public GoogleGeminiService(IConfiguration configuration, ILogger<GoogleGeminiService> logger)
     {
-        _httpClient = httpClient;
         _logger = logger;
         _apiKey = configuration["GoogleGemini:ApiKey"] ?? string.Empty;
+        
+        // Initialize the Google GenAI client
+        if (!string.IsNullOrEmpty(_apiKey))
+        {
+            _client = new Client(apiKey: _apiKey);
+        }
+        else
+        {
+            _client = null!; // Will be handled in AnalyzeFlyerImageAsync
+        }
     }
 
     public async Task<FlyerAnalysisResult> AnalyzeFlyerImageAsync(string imagePath)
@@ -23,7 +32,7 @@ public class GoogleGeminiService : IGoogleGeminiService
         try
         {
             // Check if API key is configured
-            if (string.IsNullOrEmpty(_apiKey))
+            if (string.IsNullOrEmpty(_apiKey) || _client == null)
             {
                 _logger.LogError("Google Gemini API key is not configured");
                 return new FlyerAnalysisResult
@@ -33,9 +42,8 @@ public class GoogleGeminiService : IGoogleGeminiService
                 };
             }
 
-            // Read and encode image to base64
-            var imageBytes = await File.ReadAllBytesAsync(imagePath);
-            var base64Image = Convert.ToBase64String(imageBytes);
+            // Read image bytes
+            var imageBytes = await System.IO.File.ReadAllBytesAsync(imagePath);
             
             // Determine MIME type from file extension
             var mimeType = GetMimeType(imagePath);
@@ -87,53 +95,31 @@ Important instructions:
 
 Please analyze the flyer and return the JSON:";
 
-            // Create the request payload
-            var requestPayload = new
+            // Create the request content with text and image using the SDK
+            var content = new Content
             {
-                contents = new[]
+                Parts =
                 {
-                    new
+                    new Part { Text = prompt },
+                    new Part
                     {
-                        parts = new object[]
+                        InlineData = new Blob
                         {
-                            new { text = prompt },
-                            new
-                            {
-                                inline_data = new
-                                {
-                                    mime_type = mimeType,
-                                    data = base64Image
-                                }
-                            }
+                            MimeType = mimeType,
+                            Data = imageBytes
                         }
                     }
                 }
             };
 
-            var jsonPayload = JsonSerializer.Serialize(requestPayload);
-            var content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
+            // Call the Gemini API using the SDK
+            var response = await _client.Models.GenerateContentAsync(
+                model: "gemini-1.5-flash",
+                contents: content
+            );
 
-            // Add API key to URL
-            var urlWithKey = $"{GeminiApiUrl}?key={_apiKey}";
-
-            // Send request to Gemini API
-            var response = await _httpClient.PostAsync(urlWithKey, content);
-            var responseContent = await response.Content.ReadAsStringAsync();
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogError("Gemini API error: {StatusCode} - {Response}", response.StatusCode, responseContent);
-                return new FlyerAnalysisResult
-                {
-                    Success = false,
-                    ErrorMessage = $"Gemini API error: {response.StatusCode}"
-                };
-            }
-
-            // Parse response
-            var geminiResponse = JsonSerializer.Deserialize<GeminiResponse>(responseContent);
-            
-            if (geminiResponse?.Candidates == null || geminiResponse.Candidates.Count == 0)
+            // Check if we have a valid response
+            if (response?.Candidates == null || response.Candidates.Count == 0)
             {
                 _logger.LogWarning("No candidates in Gemini response");
                 return new FlyerAnalysisResult
@@ -144,7 +130,7 @@ Please analyze the flyer and return the JSON:";
             }
 
             // Extract text from response
-            var textResponse = geminiResponse.Candidates[0]?.Content?.Parts?.FirstOrDefault()?.Text;
+            var textResponse = response.Candidates[0]?.Content?.Parts?.FirstOrDefault()?.Text;
             
             if (string.IsNullOrEmpty(textResponse))
             {
@@ -218,31 +204,6 @@ Please analyze the flyer and return the JSON:";
             ".webp" => "image/webp",
             _ => "image/jpeg"
         };
-    }
-
-    // DTOs for Gemini API response
-    private class GeminiResponse
-    {
-        [JsonPropertyName("candidates")]
-        public List<Candidate>? Candidates { get; set; }
-    }
-
-    private class Candidate
-    {
-        [JsonPropertyName("content")]
-        public Content? Content { get; set; }
-    }
-
-    private class Content
-    {
-        [JsonPropertyName("parts")]
-        public List<Part>? Parts { get; set; }
-    }
-
-    private class Part
-    {
-        [JsonPropertyName("text")]
-        public string? Text { get; set; }
     }
 
     private class FlyerAnalysisData

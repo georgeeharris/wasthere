@@ -15,8 +15,8 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add HttpClient for Gemini service (also registers the service)
-builder.Services.AddHttpClient<IGoogleGeminiService, GoogleGeminiService>();
+// Add Google Gemini service
+builder.Services.AddSingleton<IGoogleGeminiService, GoogleGeminiService>();
 
 // Add DateYearInferenceService
 builder.Services.AddSingleton<IDateYearInferenceService, DateYearInferenceService>();

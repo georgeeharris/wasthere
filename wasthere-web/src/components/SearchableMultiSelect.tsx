@@ -59,6 +59,9 @@ export function SearchableMultiSelect({
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       setIsOpen(!isOpen);
+    } else if (event.key === 'Escape' && isOpen) {
+      event.preventDefault();
+      setIsOpen(false);
     }
   };
 

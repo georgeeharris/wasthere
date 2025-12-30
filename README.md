@@ -9,6 +9,7 @@ A simple, clean web application for maintaining an archive of club events. Keep 
 - **Acts Management**: Track performing artists
 - **Club Nights**: Create club night instances that combine events, venues, dates, and lineup of acts
 - **Flyer Management**: Upload and manage flyer images organized by event, venue, and date
+- **AI-Powered Auto-Population**: Automatically extract events, venues, acts, and club night dates from flyer images using Google Gemini AI
 
 ## Tech Stack
 
@@ -128,6 +129,7 @@ The frontend will start at `http://localhost:5173`
 - `GET/POST/PUT/DELETE /api/clubnights` - Manage club night instances
 - `GET/POST/DELETE /api/flyers` - Manage flyer images
   - `POST /api/flyers/upload` - Upload flyer image with Event, Venue, and earliest ClubNight date
+  - `POST /api/flyers/{id}/auto-populate` - Automatically extract and populate events, venues, acts, and club nights from flyer using AI
   - Static files served at `/uploads/{event}/{venue}/{date}/`
 
 ## Development Notes
@@ -136,6 +138,22 @@ The frontend will start at `http://localhost:5173`
 - In Docker deployment, data is persisted in a PostgreSQL database
 - CORS is configured to allow requests from the frontend
 - The API includes Swagger UI at `http://localhost:5000/swagger` for API exploration
+
+### AI-Powered Auto-Population
+
+The application uses Google's Gemini 2.0 Flash AI to automatically extract information from flyer images:
+
+- **Configuration**: Set `GoogleGemini:ApiKey` in `appsettings.json` or via environment variable
+- **Features**:
+  - Extracts event names, venue names, dates, and performing acts from flyer images
+  - Creates new entities or matches existing ones (case-insensitive)
+  - Handles multiple dates on the same flyer (creates separate club nights)
+  - Adds resident DJs to all club nights on the flyer
+- **Usage**: Click the "Auto-populate" button on any uploaded flyer in the Flyers section
+- **Notes**: 
+  - API key in `appsettings.json` is for development only
+  - For production, set via environment variable: `GoogleGemini__ApiKey`
+  - The service will fail gracefully if no API key is configured
 
 ## Docker Architecture
 

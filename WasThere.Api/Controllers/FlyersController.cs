@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WasThere.Api.Data;
 using WasThere.Api.Models;
+using WasThere.Api.Services;
 
 namespace WasThere.Api.Controllers;
 
@@ -12,6 +13,7 @@ public class FlyersController : ControllerBase
     private readonly ClubEventContext _context;
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<FlyersController> _logger;
+    private readonly IGoogleGeminiService _geminiService;
     private const long MaxFileSize = 10 * 1024 * 1024; // 10MB
     private const string UploadsFolder = "uploads";
     private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
@@ -19,11 +21,13 @@ public class FlyersController : ControllerBase
     public FlyersController(
         ClubEventContext context, 
         IWebHostEnvironment environment,
-        ILogger<FlyersController> logger)
+        ILogger<FlyersController> logger,
+        IGoogleGeminiService geminiService)
     {
         _context = context;
         _environment = environment;
         _logger = logger;
+        _geminiService = geminiService;
     }
 
     [HttpGet]
@@ -177,6 +181,155 @@ public class FlyersController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("{id}/auto-populate")]
+    public async Task<ActionResult<AutoPopulateResult>> AutoPopulateFromFlyer(int id)
+    {
+        var flyer = await _context.Flyers.FindAsync(id);
+        if (flyer == null)
+        {
+            return NotFound("Flyer not found");
+        }
+
+        // Get full path to the image
+        var imagePath = Path.Combine(_environment.ContentRootPath, flyer.FilePath);
+        if (!System.IO.File.Exists(imagePath))
+        {
+            return NotFound("Flyer image file not found");
+        }
+
+        // Analyze the flyer using Google Gemini
+        var analysisResult = await _geminiService.AnalyzeFlyerImageAsync(imagePath);
+        
+        if (!analysisResult.Success)
+        {
+            return BadRequest(new AutoPopulateResult
+            {
+                Success = false,
+                Message = analysisResult.ErrorMessage ?? "Failed to analyze flyer"
+            });
+        }
+
+        var result = new AutoPopulateResult
+        {
+            Success = true,
+            Message = "Successfully analyzed flyer"
+        };
+
+        // Process each club night from the analysis
+        foreach (var clubNightData in analysisResult.ClubNights)
+        {
+            try
+            {
+                // Find or create Event
+                var eventName = clubNightData.EventName?.Trim();
+                if (string.IsNullOrEmpty(eventName))
+                {
+                    _logger.LogWarning("Skipping club night with empty event name");
+                    continue;
+                }
+
+                var existingEvent = await _context.Events
+                    .FirstOrDefaultAsync(e => e.Name.ToLower() == eventName.ToLower());
+                
+                var eventEntity = existingEvent ?? new Event { Name = eventName };
+                if (existingEvent == null)
+                {
+                    _context.Events.Add(eventEntity);
+                    await _context.SaveChangesAsync();
+                    result.EventsCreated++;
+                }
+
+                // Find or create Venue
+                var venueName = clubNightData.VenueName?.Trim();
+                Venue? venueEntity = null;
+                
+                if (!string.IsNullOrEmpty(venueName))
+                {
+                    var existingVenue = await _context.Venues
+                        .FirstOrDefaultAsync(v => v.Name.ToLower() == venueName.ToLower());
+                    
+                    venueEntity = existingVenue ?? new Venue { Name = venueName };
+                    if (existingVenue == null)
+                    {
+                        _context.Venues.Add(venueEntity);
+                        await _context.SaveChangesAsync();
+                        result.VenuesCreated++;
+                    }
+                }
+                else
+                {
+                    // Use venue from flyer if not in analysis
+                    venueEntity = await _context.Venues.FindAsync(flyer.VenueId);
+                }
+
+                if (venueEntity == null)
+                {
+                    _logger.LogWarning("No venue found for club night");
+                    continue;
+                }
+
+                // Create ClubNight if date is provided
+                if (clubNightData.Date.HasValue)
+                {
+                    // Note: AI returns dates without timezone info, treating as UTC
+                    // For production, consider enhancing prompt to request timezone or infer from venue location
+                    var clubNight = new ClubNight
+                    {
+                        Date = DateTime.SpecifyKind(clubNightData.Date.Value, DateTimeKind.Utc),
+                        EventId = eventEntity.Id,
+                        VenueId = venueEntity.Id,
+                        FlyerId = flyer.Id
+                    };
+
+                    _context.ClubNights.Add(clubNight);
+                    await _context.SaveChangesAsync();
+                    result.ClubNightsCreated++;
+
+                    // Add acts
+                    foreach (var actName in clubNightData.Acts)
+                    {
+                        var trimmedActName = actName?.Trim();
+                        if (string.IsNullOrEmpty(trimmedActName))
+                        {
+                            continue;
+                        }
+
+                        // Find or create Act
+                        var existingAct = await _context.Acts
+                            .FirstOrDefaultAsync(a => a.Name.ToLower() == trimmedActName.ToLower());
+                        
+                        var actEntity = existingAct ?? new Act { Name = trimmedActName };
+                        if (existingAct == null)
+                        {
+                            _context.Acts.Add(actEntity);
+                            await _context.SaveChangesAsync();
+                            result.ActsCreated++;
+                        }
+
+                        // Link act to club night
+                        var clubNightAct = new ClubNightAct
+                        {
+                            ClubNightId = clubNight.Id,
+                            ActId = actEntity.Id
+                        };
+                        _context.ClubNightActs.Add(clubNightAct);
+                    }
+
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing club night data");
+                result.Errors.Add($"Error processing club night: {ex.Message}");
+            }
+        }
+
+        result.Message = $"Created {result.ClubNightsCreated} club nights, {result.EventsCreated} events, {result.VenuesCreated} venues, {result.ActsCreated} acts";
+        
+        return Ok(result);
+    }
+
     private static string SanitizeFileName(string fileName)
     {
         // Remove invalid characters and replace spaces with underscores
@@ -186,4 +339,15 @@ public class FlyersController : ControllerBase
             .ToArray());
         return sanitized.Replace(" ", "_");
     }
+}
+
+public class AutoPopulateResult
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public int ClubNightsCreated { get; set; }
+    public int EventsCreated { get; set; }
+    public int VenuesCreated { get; set; }
+    public int ActsCreated { get; set; }
+    public List<string> Errors { get; set; } = new();
 }

@@ -16,6 +16,7 @@ This document provides a quick reference for all GitHub Secrets needed for the C
 | `VPS_USERNAME` | SSH username for VPS | `ubuntu` |
 | `VPS_SSH_KEY` | Private SSH key (full content) | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
 | `POSTGRES_PASSWORD` | Database password (use strong password!) | Generate: `openssl rand -base64 32` |
+| `GOOGLE_GEMINI_API_KEY` | Google Gemini API key for AI flyer analysis | Get from: https://aistudio.google.com/app/apikey |
 
 ## Optional Secrets (with defaults)
 
@@ -59,6 +60,7 @@ VPS_HOST: your-vps-ip
 VPS_USERNAME: ubuntu
 VPS_SSH_KEY: <your-private-key>
 POSTGRES_PASSWORD: <strong-password>
+GOOGLE_GEMINI_API_KEY: <your-api-key>
 ```
 
 ### Production Setup with Custom Domain
@@ -67,6 +69,7 @@ VPS_HOST: wasthere.yourdomain.com
 VPS_USERNAME: ubuntu
 VPS_SSH_KEY: <your-private-key>
 POSTGRES_PASSWORD: <strong-password>
+GOOGLE_GEMINI_API_KEY: <your-api-key>
 CORS_ORIGINS: http://yourdomain.com,https://yourdomain.com
 VITE_API_URL: https://api.yourdomain.com/api
 WEB_PORT: 443

@@ -164,8 +164,31 @@ export const flyersApi = {
     });
   },
   
+  autoPopulate: async (id: number): Promise<AutoPopulateResult> => {
+    const response = await fetch(`${API_BASE_URL}/flyers/${id}/auto-populate`, {
+      method: 'POST',
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to auto-populate from flyer');
+    }
+
+    return response.json();
+  },
+  
   getImageUrl: (filePath: string): string => {
     // Convert relative path to API URL
     return `${API_BASE_URL.replace('/api', '')}/${filePath.replace(/\\/g, '/')}`;
   },
 };
+
+export interface AutoPopulateResult {
+  success: boolean;
+  message: string;
+  clubNightsCreated: number;
+  eventsCreated: number;
+  venuesCreated: number;
+  actsCreated: number;
+  errors: string[];
+}

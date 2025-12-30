@@ -168,13 +168,13 @@
   background-color: #ffe0e0;
 }
 
-.live-set-label input[type="checkbox"]:disabled {
-  cursor: not-allowed;
+.live-set-label input[type="checkbox"]:disabled,
+.live-set-label input[type="checkbox"]:disabled ~ span {
   opacity: 0.5;
 }
 
-.live-set-label input[type="checkbox"]:disabled ~ span {
-  opacity: 0.5;
+.live-set-label input[type="checkbox"]:disabled {
+  cursor: not-allowed;
 }
 
 .live-set-label input[type="checkbox"]:checked + span {

@@ -48,10 +48,12 @@ public class DateYearInferenceService : IDateYearInferenceService
             }
         }
 
-        // If we found matches in the preferred range, return the middle one
+        // If we found matches in the preferred range, return the one closest to the middle of the range
         if (candidateYears.Count > 0)
         {
-            return candidateYears[candidateYears.Count / 2];
+            // Prefer years closest to the middle of the 1995-2010 range (around 2002-2003)
+            int targetYear = (PreferredStartYear + PreferredEndYear) / 2; // 2002
+            return candidateYears.OrderBy(y => Math.Abs(y - targetYear)).First();
         }
 
         // If no matches in preferred range, search the extended range
@@ -71,10 +73,12 @@ public class DateYearInferenceService : IDateYearInferenceService
             }
         }
 
-        // Return the middle candidate from extended range
+        // Return the candidate closest to the preferred range
         if (candidateYears.Count > 0)
         {
-            return candidateYears[candidateYears.Count / 2];
+            // Prefer years closest to the middle of the preferred range (around 2002)
+            int targetYear = (PreferredStartYear + PreferredEndYear) / 2; // 2002
+            return candidateYears.OrderBy(y => Math.Abs(y - targetYear)).First();
         }
 
         return null;

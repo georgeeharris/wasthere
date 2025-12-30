@@ -168,20 +168,26 @@ public class FlyersController : ControllerBase
         }
 
         // Determine earliest date from analysis results
-        var earliestDate = DateTime.UtcNow;
+        DateTime? earliestDate = null;
         foreach (var clubNightData in analysisResult.ClubNights)
         {
             var inferredDate = InferDate(clubNightData);
-            if (inferredDate.HasValue && inferredDate.Value < earliestDate)
+            if (inferredDate.HasValue)
             {
-                earliestDate = inferredDate.Value;
+                if (!earliestDate.HasValue || inferredDate.Value < earliestDate.Value)
+                {
+                    earliestDate = inferredDate.Value;
+                }
             }
         }
+
+        // If no valid date found, use a default date in the middle of our target range
+        var finalDate = earliestDate ?? new DateTime(2002, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         // Sanitize names for use in file paths
         var sanitizedEventName = SanitizeFileName(eventEntity.Name);
         var sanitizedVenueName = SanitizeFileName(venueEntity.Name);
-        var dateFolder = earliestDate.ToString("yyyy-MM-dd");
+        var dateFolder = finalDate.ToString("yyyy-MM-dd");
 
         // Move file to proper location: uploads/{event}/{venue}/{date}/
         var finalUploadsPath = Path.Combine(_environment.ContentRootPath, UploadsFolder, sanitizedEventName, sanitizedVenueName, dateFolder);
@@ -210,7 +216,7 @@ public class FlyersController : ControllerBase
             UploadedAt = DateTime.UtcNow,
             EventId = eventEntity.Id,
             VenueId = venueEntity.Id,
-            EarliestClubNightDate = DateTime.SpecifyKind(earliestDate, DateTimeKind.Utc)
+            EarliestClubNightDate = finalDate
         };
 
         _context.Flyers.Add(flyer);

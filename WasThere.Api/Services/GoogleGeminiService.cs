@@ -7,7 +7,7 @@ namespace WasThere.Api.Services;
 
 public class GoogleGeminiService : IGoogleGeminiService
 {
-    private readonly Client _client;
+    private readonly Client? _client;
     private readonly ILogger<GoogleGeminiService> _logger;
     private readonly string _apiKey;
 
@@ -20,10 +20,6 @@ public class GoogleGeminiService : IGoogleGeminiService
         if (!string.IsNullOrEmpty(_apiKey))
         {
             _client = new Client(apiKey: _apiKey);
-        }
-        else
-        {
-            _client = null!; // Will be handled in AnalyzeFlyerImageAsync
         }
     }
 
@@ -113,10 +109,23 @@ Please analyze the flyer and return the JSON:";
             };
 
             // Call the Gemini API using the SDK
-            var response = await _client.Models.GenerateContentAsync(
-                model: "gemini-1.5-flash",
-                contents: content
-            );
+            GenerateContentResponse response;
+            try
+            {
+                response = await _client.Models.GenerateContentAsync(
+                    model: "gemini-2.5-pro",
+                    contents: content
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error calling Gemini API");
+                return new FlyerAnalysisResult
+                {
+                    Success = false,
+                    ErrorMessage = $"Error calling Gemini API: {ex.Message}"
+                };
+            }
 
             // Check if we have a valid response
             if (response?.Candidates == null || response.Candidates.Count == 0)

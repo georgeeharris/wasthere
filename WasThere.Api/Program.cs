@@ -6,6 +6,13 @@ using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure Kestrel to allow longer request timeouts for AI processing
+builder.WebHost.ConfigureKestrel(serverOptions =>
+{
+    serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(5);
+    serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
+});
+
 // Add services to the container
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -14,6 +21,12 @@ builder.Services.AddControllers()
     });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Configure HttpClient for long-running operations
+builder.Services.AddHttpClient("LongRunning", client =>
+{
+    client.Timeout = TimeSpan.FromMinutes(5);
+});
 
 // Add Google Gemini service
 builder.Services.AddSingleton<IGoogleGeminiService, GoogleGeminiService>();

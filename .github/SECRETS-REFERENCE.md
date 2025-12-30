@@ -25,6 +25,7 @@ This document provides a quick reference for all GitHub Secrets needed for the C
 | `VPS_APP_PATH` | App directory on VPS | `~/wasthere` |
 | `POSTGRES_DB` | Database name | `wasthere` |
 | `POSTGRES_USER` | Database username | `postgres` |
+| `CORS_ORIGINS` | Comma-separated list of allowed CORS origins | `http://localhost,http://localhost:5173,http://localhost:3000` |
 | `VITE_API_URL` | Frontend API URL | `http://localhost:5000/api` |
 | `WEB_PORT` | Web frontend port | `80` |
 | `API_PORT` | API port | `5000` |
@@ -66,6 +67,7 @@ VPS_HOST: wasthere.yourdomain.com
 VPS_USERNAME: ubuntu
 VPS_SSH_KEY: <your-private-key>
 POSTGRES_PASSWORD: <strong-password>
+CORS_ORIGINS: http://yourdomain.com,https://yourdomain.com
 VITE_API_URL: https://api.yourdomain.com/api
 WEB_PORT: 443
 ```

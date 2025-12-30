@@ -15,11 +15,8 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add HttpClient for Gemini service
+// Add HttpClient for Gemini service (also registers the service)
 builder.Services.AddHttpClient<IGoogleGeminiService, GoogleGeminiService>();
-
-// Add Gemini service
-builder.Services.AddScoped<IGoogleGeminiService, GoogleGeminiService>();
 
 // Add DbContext - Use PostgreSQL if connection string is provided, otherwise use in-memory database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");

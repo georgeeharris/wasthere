@@ -271,6 +271,8 @@ public class FlyersController : ControllerBase
                 // Create ClubNight if date is provided
                 if (clubNightData.Date.HasValue)
                 {
+                    // Note: AI returns dates without timezone info, treating as UTC
+                    // For production, consider enhancing prompt to request timezone or infer from venue location
                     var clubNight = new ClubNight
                     {
                         Date = DateTime.SpecifyKind(clubNightData.Date.Value, DateTimeKind.Utc),

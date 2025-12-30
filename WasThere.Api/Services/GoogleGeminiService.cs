@@ -15,13 +15,24 @@ public class GoogleGeminiService : IGoogleGeminiService
     {
         _httpClient = httpClient;
         _logger = logger;
-        _apiKey = configuration["GoogleGemini:ApiKey"] ?? "AIzaSyBWz6nv-fjmX3vpzxgmO1rTA8I9G0JFhMA";
+        _apiKey = configuration["GoogleGemini:ApiKey"] ?? string.Empty;
     }
 
     public async Task<FlyerAnalysisResult> AnalyzeFlyerImageAsync(string imagePath)
     {
         try
         {
+            // Check if API key is configured
+            if (string.IsNullOrEmpty(_apiKey))
+            {
+                _logger.LogError("Google Gemini API key is not configured");
+                return new FlyerAnalysisResult
+                {
+                    Success = false,
+                    ErrorMessage = "Google Gemini API key is not configured. Please set GoogleGemini:ApiKey in configuration."
+                };
+            }
+
             // Read and encode image to base64
             var imageBytes = await File.ReadAllBytesAsync(imagePath);
             var base64Image = Convert.ToBase64String(imageBytes);

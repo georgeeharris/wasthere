@@ -115,6 +115,8 @@
 .acts-list {
   overflow-y: auto;
   max-height: 250px;
+  display: flex;
+  flex-direction: column;
 }
 
 .act-list-item {
@@ -124,6 +126,8 @@
   padding: 8px 12px;
   border-bottom: 1px solid #f5f5f5;
   transition: background-color 0.2s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .act-list-item:hover {
@@ -156,10 +160,21 @@
   cursor: pointer;
   font-size: 13px;
   white-space: nowrap;
+  min-width: 70px;
+  justify-content: center;
 }
 
 .live-set-label:hover {
   background-color: #ffe0e0;
+}
+
+.live-set-label input[type="checkbox"]:disabled,
+.live-set-label input[type="checkbox"]:disabled ~ span {
+  opacity: 0.5;
+}
+
+.live-set-label input[type="checkbox"]:disabled {
+  cursor: not-allowed;
 }
 
 .live-set-label input[type="checkbox"]:checked + span {

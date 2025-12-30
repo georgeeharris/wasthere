@@ -33,6 +33,8 @@ services:
       - GoogleGemini__ApiKey=${GOOGLE_GEMINI_API_KEY}
     ports:
       - "${API_PORT:-5000}:5000"
+    volumes:
+      - api_uploads:/app/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -58,6 +60,7 @@ services:
 
 volumes:
   postgres_data:
+  api_uploads:
 
 networks:
   wasthere-network:

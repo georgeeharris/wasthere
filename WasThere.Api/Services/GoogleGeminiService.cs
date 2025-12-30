@@ -64,13 +64,17 @@ Important instructions:
 2. For 'Residents' or 'Resident DJs', add them as acts on EVERY club night date
 3. Include the event name (the recurring night name like 'Fabric' or the specific event title)
 4. Include all performing artists/DJs listed
-5. For each act, determine if it's a live set:
+5. **CRITICAL**: If a listing combines multiple acts with separators like '&', 'and', 'B2B', 'b2b', 'vs', 'VS', or similar, split them into separate act entries. For example:
+   - 'DJ A & DJ B' should become two acts: 'DJ A' and 'DJ B'
+   - 'Artist X B2B Artist Y' should become two acts: 'Artist X' and 'Artist Y'
+   - 'DJ 1 vs DJ 2' should become two acts: 'DJ 1' and 'DJ 2'
+6. For each act, determine if it's a live set:
    - Set isLiveSet to true if the act has indicators like '(live)', '(live set)', '(live PA)', 'live', or similar
    - Set isLiveSet to false if it has '(DJ set)', '(DJ)', or no indicator (default to DJ set)
    - Remove the performance type indicators from the name (e.g., 'Dave Clarke (live)' should be just 'Dave Clarke')
-6. If multiple dates are shown, create separate entries for each date
-7. Only extract information that is clearly visible in the flyer
-8. Return ONLY valid JSON, no additional text or markdown
+7. If multiple dates are shown, create separate entries for each date
+8. Only extract information that is clearly visible in the flyer
+9. Return ONLY valid JSON, no additional text or markdown
 
 Please analyze the flyer and return the JSON:";
 

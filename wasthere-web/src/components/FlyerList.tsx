@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import type { Flyer } from '../types';
+import type { Flyer, DiagnosticInfo } from '../types';
 import { flyersApi, type AutoPopulateResult } from '../services/api';
+import { ErrorDiagnostics } from './ErrorDiagnostics';
 
 export function FlyerList() {
   const [flyers, setFlyers] = useState<Flyer[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [diagnostics, setDiagnostics] = useState<DiagnosticInfo | undefined>(undefined);
   const [autoPopulating, setAutoPopulating] = useState<number | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -30,6 +32,7 @@ export function FlyerList() {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
       setError(null);
+      setDiagnostics(undefined);
     }
   };
 
@@ -43,6 +46,7 @@ export function FlyerList() {
 
     setUploading(true);
     setError(null);
+    setDiagnostics(undefined);
     setSuccessMessage(null);
 
     try {
@@ -73,10 +77,13 @@ export function FlyerList() {
         setTimeout(() => setSuccessMessage(null), 10000);
       } else {
         setError(result.message || 'Failed to upload flyer');
+        setDiagnostics(result.diagnostics);
       }
     } catch (error) {
       console.error('Failed to upload flyer:', error);
-      setError(error instanceof Error ? error.message : 'Failed to upload flyer');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload flyer';
+      setError(errorMessage);
+      setDiagnostics(undefined);
     } finally {
       setUploading(false);
     }
@@ -97,6 +104,7 @@ export function FlyerList() {
   const handleAutoPopulate = async (id: number) => {
     setAutoPopulating(id);
     setError(null);
+    setDiagnostics(undefined);
     setSuccessMessage(null);
 
     try {
@@ -111,23 +119,37 @@ export function FlyerList() {
         setTimeout(() => setSuccessMessage(null), 5000);
       } else {
         setError(result.message || 'Failed to auto-populate from flyer');
+        setDiagnostics(result.diagnostics);
       }
     } catch (error) {
       console.error('Failed to auto-populate:', error);
-      setError(error instanceof Error ? error.message : 'Failed to auto-populate from flyer');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to auto-populate from flyer';
+      setError(errorMessage);
+      setDiagnostics(undefined);
     } finally {
       setAutoPopulating(null);
     }
   };
 
   return (
-    <div className="card">
-      <h2>Flyers</h2>
+    <>
+      {error && (
+        <ErrorDiagnostics
+          error={error}
+          diagnostics={diagnostics}
+          onClose={() => {
+            setError(null);
+            setDiagnostics(undefined);
+          }}
+        />
+      )}
       
-      <div className="club-night-form">
-        <h3>Upload New Flyer</h3>
-        {error && <div className="error-message" style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
-        {successMessage && <div className="success-message" style={{ color: 'green', marginBottom: '1rem' }}>{successMessage}</div>}
+      <div className="card">
+        <h2>Flyers</h2>
+        
+        <div className="club-night-form">
+          <h3>Upload New Flyer</h3>
+          {successMessage && <div className="success-message" style={{ color: 'green', marginBottom: '1rem' }}>{successMessage}</div>}
         
         <form onSubmit={handleUpload}>
           <div className="form-group">
@@ -209,5 +231,6 @@ export function FlyerList() {
         )}
       </div>
     </div>
+    </>
   );
 }

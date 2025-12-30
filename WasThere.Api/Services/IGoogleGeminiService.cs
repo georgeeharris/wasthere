@@ -1,3 +1,5 @@
+using WasThere.Api.Models;
+
 namespace WasThere.Api.Services;
 
 public interface IGoogleGeminiService
@@ -10,6 +12,7 @@ public class FlyerAnalysisResult
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
     public List<ClubNightData> ClubNights { get; set; } = new();
+    public DiagnosticInfo Diagnostics { get; set; } = new();
 }
 
 public class ClubNightData

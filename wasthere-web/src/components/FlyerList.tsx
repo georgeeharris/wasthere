@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Flyer, Event, Venue } from '../types';
-import { flyersApi, eventsApi, venuesApi } from '../services/api';
+import { flyersApi, eventsApi, venuesApi, type AutoPopulateResult } from '../services/api';
 
 export function FlyerList() {
   const [flyers, setFlyers] = useState<Flyer[]>([]);
@@ -12,6 +12,8 @@ export function FlyerList() {
   const [earliestDate, setEarliestDate] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoPopulating, setAutoPopulating] = useState<number | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadFlyers();
@@ -112,6 +114,32 @@ export function FlyerList() {
     }
   };
 
+  const handleAutoPopulate = async (id: number) => {
+    setAutoPopulating(id);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const result: AutoPopulateResult = await flyersApi.autoPopulate(id);
+      
+      if (result.success) {
+        setSuccessMessage(result.message);
+        // Reload flyers to show updated club nights
+        await loadFlyers();
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => setSuccessMessage(null), 5000);
+      } else {
+        setError(result.message || 'Failed to auto-populate from flyer');
+      }
+    } catch (error) {
+      console.error('Failed to auto-populate:', error);
+      setError(error instanceof Error ? error.message : 'Failed to auto-populate from flyer');
+    } finally {
+      setAutoPopulating(null);
+    }
+  };
+
   return (
     <div className="card">
       <h2>Flyers</h2>
@@ -119,6 +147,7 @@ export function FlyerList() {
       <div className="club-night-form">
         <h3>Upload New Flyer</h3>
         {error && <div className="error-message" style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>}
+        {successMessage && <div className="success-message" style={{ color: 'green', marginBottom: '1rem' }}>{successMessage}</div>}
         
         <form onSubmit={handleUpload}>
           <div className="form-group">
@@ -217,12 +246,21 @@ export function FlyerList() {
                   <div><strong>Date:</strong> {new Date(flyer.earliestClubNightDate).toLocaleDateString()}</div>
                   <div className="flyer-filename">{flyer.fileName}</div>
                 </div>
-                <button 
-                  onClick={() => handleDelete(flyer.id)} 
-                  className="btn btn-small btn-danger"
-                >
-                  Delete
-                </button>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button 
+                    onClick={() => handleAutoPopulate(flyer.id)} 
+                    className="btn btn-small btn-primary"
+                    disabled={autoPopulating === flyer.id}
+                  >
+                    {autoPopulating === flyer.id ? 'Analyzing...' : 'Auto-populate'}
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(flyer.id)} 
+                    className="btn btn-small btn-danger"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))

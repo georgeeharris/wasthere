@@ -13,6 +13,18 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 {
     serverOptions.Limits.KeepAliveTimeout = TimeSpan.FromMinutes(5);
     serverOptions.Limits.RequestHeadersTimeout = TimeSpan.FromMinutes(5);
+    
+    // Disable MinResponseDataRate to prevent connection abortion during long AI processing
+    // By default, Kestrel enforces a minimum data rate (240 bytes/5sec) and will abort
+    // connections that don't send response data fast enough (typically causes timeout around
+    // 30 seconds when no data is sent). During Gemini API calls, the server waits for AI
+    // response without sending any data to the client, triggering this limit.
+    // Setting to null disables the rate check entirely for long-running operations.
+    serverOptions.Limits.MinResponseDataRate = null;
+    
+    // Also disable MinRequestBodyDataRate to prevent issues with slow uploads
+    // This ensures large flyer images can be uploaded without rate-based timeouts
+    serverOptions.Limits.MinRequestBodyDataRate = null;
 });
 
 // Add services to the container

@@ -168,7 +168,7 @@ Please analyze the flyer and return the JSON:";
             try
             {
                 response = await _client.Models.GenerateContentAsync(
-                    model: "gemini-2.5-flash",
+                    model: "gemini-1.5-flash",
                     contents: content
                 );
                 apiStopwatch.Stop();

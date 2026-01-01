@@ -170,6 +170,9 @@ Please analyze the flyer and return the JSON:";
             
             try
             {
+                // Using gemini-1.5-flash: stable, fast, and cost-effective model
+                // Note: gemini-2.5-flash does NOT exist and will cause API failures
+                // Valid alternatives: gemini-1.5-pro (more capable), gemini-2.0-flash-exp (experimental)
                 response = await _client.Models.GenerateContentAsync(
                     model: "gemini-1.5-flash",
                     contents: content

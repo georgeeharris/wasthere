@@ -436,7 +436,8 @@ public class FlyersController : ControllerBase
         // If full date is available, use it
         if (clubNightData.Date.HasValue)
         {
-            return clubNightData.Date.Value;
+            // Ensure the DateTime is marked as UTC
+            return DateTime.SpecifyKind(clubNightData.Date.Value, DateTimeKind.Utc);
         }
 
         // If we have month and day, try to infer the year
@@ -452,7 +453,7 @@ public class FlyersController : ControllerBase
             {
                 try
                 {
-                    return new DateTime(inferredYear.Value, clubNightData.Month.Value, clubNightData.Day.Value);
+                    return new DateTime(inferredYear.Value, clubNightData.Month.Value, clubNightData.Day.Value, 0, 0, 0, DateTimeKind.Utc);
                 }
                 catch (Exception ex)
                 {

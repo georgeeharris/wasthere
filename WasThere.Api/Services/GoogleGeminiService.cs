@@ -152,7 +152,7 @@ Please analyze the flyer and return the JSON:";
             });
             
             prepareRequestStep.Status = "completed";
-            diagnostics.Metadata["GeminiModel"] = "gemini-2.5-flash";
+            diagnostics.Metadata["GeminiModel"] = "gemini-1.5-flash";
 
             // Call the Gemini API using the SDK
             var apiCallStep = new DiagnosticStep
@@ -165,10 +165,13 @@ Please analyze the flyer and return the JSON:";
             
             GenerateContentResponse response;
             var apiStopwatch = Stopwatch.StartNew();
+            
+            _logger.LogInformation("Calling Gemini API with model: gemini-1.5-flash, Parts count: {PartsCount}", content.Parts?.Count ?? 0);
+            
             try
             {
                 response = await _client.Models.GenerateContentAsync(
-                    model: "gemini-2.5-flash",
+                    model: "gemini-1.5-flash",
                     contents: content
                 );
                 apiStopwatch.Stop();
@@ -186,8 +189,19 @@ Please analyze the flyer and return the JSON:";
                 apiCallStep.Error = ex.Message;
                 diagnostics.ErrorMessage = $"Error calling Gemini API: {ex.Message}";
                 diagnostics.StackTrace = ex.StackTrace;
+                diagnostics.Metadata["ExceptionType"] = ex.GetType().FullName ?? ex.GetType().Name;
                 
-                _logger.LogError(ex, "Error calling Gemini API");
+                if (ex.InnerException != null)
+                {
+                    diagnostics.Metadata["InnerException"] = ex.InnerException.Message;
+                    diagnostics.Metadata["InnerExceptionType"] = ex.InnerException.GetType().FullName ?? ex.InnerException.GetType().Name;
+                }
+                
+                _logger.LogError(ex, "Error calling Gemini API with model gemini-1.5-flash. Model: {Model}, ImageSize: {ImageSize}, Exception: {ExceptionType}", 
+                    "gemini-1.5-flash", 
+                    imageBytes.Length, 
+                    ex.GetType().Name);
+                    
                 return new FlyerAnalysisResult
                 {
                     Success = false,

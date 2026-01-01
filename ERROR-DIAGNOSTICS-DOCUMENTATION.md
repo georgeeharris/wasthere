@@ -140,7 +140,7 @@ Metadata:
   APIKeyConfigured: true
   ImageSizeBytes: 2458376
   MimeType: image/jpeg
-  GeminiModel: gemini-2.5-flash
+  GeminiModel: gemini-1.5-flash
   TotalDurationMs: 180234
 
 Processing Steps:

@@ -12,6 +12,11 @@ public class GoogleGeminiService : IGoogleGeminiService
     private readonly Client? _client;
     private readonly ILogger<GoogleGeminiService> _logger;
     private readonly string _apiKey;
+    
+    // Gemini model to use for flyer analysis
+    // Using gemini-1.5-flash: stable, fast, and cost-effective
+    // Note: gemini-2.5-flash does NOT exist and will cause API failures
+    private const string GeminiModel = "gemini-1.5-flash";
 
     public GoogleGeminiService(IConfiguration configuration, ILogger<GoogleGeminiService> logger)
     {
@@ -152,7 +157,7 @@ Please analyze the flyer and return the JSON:";
             });
             
             prepareRequestStep.Status = "completed";
-            diagnostics.Metadata["GeminiModel"] = "gemini-2.5-flash";
+            diagnostics.Metadata["GeminiModel"] = GeminiModel;
 
             // Call the Gemini API using the SDK
             var apiCallStep = new DiagnosticStep
@@ -165,10 +170,16 @@ Please analyze the flyer and return the JSON:";
             
             GenerateContentResponse response;
             var apiStopwatch = Stopwatch.StartNew();
+            
+            _logger.LogInformation("Calling Gemini API with model: {Model}, Parts count: {PartsCount}", GeminiModel, content.Parts?.Count ?? 0);
+            
             try
             {
+                // Using gemini-1.5-flash: stable, fast, and cost-effective model
+                // Note: gemini-2.5-flash does NOT exist and will cause API failures
+                // Valid alternatives: gemini-1.5-pro (more capable), gemini-2.0-flash-exp (experimental)
                 response = await _client.Models.GenerateContentAsync(
-                    model: "gemini-2.5-flash",
+                    model: GeminiModel,
                     contents: content
                 );
                 apiStopwatch.Stop();
@@ -186,8 +197,19 @@ Please analyze the flyer and return the JSON:";
                 apiCallStep.Error = ex.Message;
                 diagnostics.ErrorMessage = $"Error calling Gemini API: {ex.Message}";
                 diagnostics.StackTrace = ex.StackTrace;
+                diagnostics.Metadata["ExceptionType"] = ex.GetType().FullName ?? ex.GetType().Name;
                 
-                _logger.LogError(ex, "Error calling Gemini API");
+                if (ex.InnerException != null)
+                {
+                    diagnostics.Metadata["InnerException"] = ex.InnerException.Message;
+                    diagnostics.Metadata["InnerExceptionType"] = ex.InnerException.GetType().FullName ?? ex.InnerException.GetType().Name;
+                }
+                
+                _logger.LogError(ex, "Error calling Gemini API with model {Model}. ImageSize: {ImageSize}, Exception: {ExceptionType}", 
+                    GeminiModel, 
+                    imageBytes.Length, 
+                    ex.GetType().Name);
+                    
                 return new FlyerAnalysisResult
                 {
                     Success = false,

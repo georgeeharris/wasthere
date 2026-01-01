@@ -14,9 +14,9 @@ public class GoogleGeminiService : IGoogleGeminiService
     private readonly string _apiKey;
     
     // Gemini model to use for flyer analysis
-    // Using gemini-1.5-flash: stable, fast, and cost-effective
-    // Note: gemini-2.5-flash does NOT exist and will cause API failures
-    private const string GeminiModel = "gemini-1.5-flash";
+    // Using gemini-2.5-flash: stable, fast, and cost-effective
+    // Note: gemini-1.5-flash is deprecated and no longer available in v1beta API
+    private const string GeminiModel = "gemini-2.5-flash";
 
     public GoogleGeminiService(IConfiguration configuration, ILogger<GoogleGeminiService> logger)
     {
@@ -175,9 +175,9 @@ Please analyze the flyer and return the JSON:";
             
             try
             {
-                // Using gemini-1.5-flash: stable, fast, and cost-effective model
-                // Note: gemini-2.5-flash does NOT exist and will cause API failures
-                // Valid alternatives: gemini-1.5-pro (more capable), gemini-2.0-flash-exp (experimental)
+                // Using gemini-2.5-flash: stable, fast, and cost-effective model
+                // Note: gemini-1.5-flash is deprecated and no longer available in v1beta API
+                // Valid alternatives: gemini-2.5-pro (more capable), gemini-2.5-flash-lite (faster)
                 response = await _client.Models.GenerateContentAsync(
                     model: GeminiModel,
                     contents: content

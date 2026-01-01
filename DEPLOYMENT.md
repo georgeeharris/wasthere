@@ -63,8 +63,8 @@ Available configuration options:
 - `POSTGRES_DB`: Database name (default: wasthere)
 - `POSTGRES_USER`: Database username (default: wasthere_user)
 - `POSTGRES_PASSWORD`: Database password (**MUST BE SET** - no default)
-- `CORS_ORIGINS`: Comma-separated list of allowed frontend origins (default: http://localhost,http://localhost:5173,http://localhost:3000)
-- `VITE_API_URL`: Frontend API URL (default: http://localhost:5000/api)
+- `CORS_ORIGINS`: Comma-separated list of allowed frontend origins (default: http://www.wasthere.co.uk,https://www.wasthere.co.uk,http://localhost,http://localhost:5173,http://localhost:3000)
+- `VITE_API_URL`: Frontend API URL (default: http://www.wasthere.co.uk:5000/api)
 - `DB_PORT`: Database port (default: 5432)
 - `API_PORT`: API port (default: 5000)
 - `WEB_PORT`: Web frontend port (default: 80)
@@ -74,7 +74,7 @@ Available configuration options:
 - Never commit the `.env` file to version control
 - Consider using Docker secrets for sensitive data in production
 - Remove or change the DB_PORT mapping to not expose PostgreSQL externally
-- **Update `CORS_ORIGINS`** to match your actual domain(s), e.g., `CORS_ORIGINS=http://82.165.153.98,https://yourdomain.com`
+- **Update `CORS_ORIGINS`** to match your actual domain(s), e.g., `CORS_ORIGINS=http://www.wasthere.co.uk,https://www.wasthere.co.uk`
 
 ### Verify Configuration
 
@@ -104,13 +104,13 @@ docker compose ps
 ```
 
 The application will be available at:
-- **Frontend**: http://localhost (or http://your-vm-ip)
-- **API**: http://localhost:5000
-- **Swagger UI**: http://localhost:5000/swagger
+- **Frontend**: http://www.wasthere.co.uk (or http://localhost for local development)
+- **API**: http://www.wasthere.co.uk:5000 (or http://localhost:5000 for local development)
+- **Swagger UI**: http://www.wasthere.co.uk:5000/swagger (or http://localhost:5000/swagger for local development)
 
 ## Step 5: Verify Deployment
 
-1. Open your browser to http://localhost (or your VM's IP address)
+1. Open your browser to http://www.wasthere.co.uk (or http://localhost for local development)
 2. You should see the WasThere application
 3. Try adding some events, venues, and acts
 4. Create a club night to verify full functionality
@@ -215,11 +215,11 @@ If you see errors like "Access to fetch has been blocked by CORS policy":
 
 1. Check your `CORS_ORIGINS` setting in `.env`:
    ```bash
-   # For production with IP address
-   CORS_ORIGINS=http://82.165.153.98
+   # For production with domain
+   CORS_ORIGINS=http://www.wasthere.co.uk,https://www.wasthere.co.uk
    
-   # For production with domain name
-   CORS_ORIGINS=http://yourdomain.com,https://yourdomain.com
+   # For local development
+   CORS_ORIGINS=http://localhost,http://localhost:5173,http://localhost:3000
    ```
 
 2. Restart the API container after changing `.env`:

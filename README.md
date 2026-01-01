@@ -81,6 +81,7 @@ Key configuration options:
   - For production with a domain: `CORS_ORIGINS=http://www.wasthere.co.uk,https://www.wasthere.co.uk`
   - For local development: `CORS_ORIGINS=http://localhost,http://localhost:5173,http://localhost:3000`
 - `VITE_API_URL`: Frontend API endpoint URL
+  - **Important**: Always use domain names, not IP addresses (e.g., `http://www.wasthere.co.uk:5000/api` not `http://82.165.153.98:5000/api`) to avoid CORS errors
 - Ports: `API_PORT`, `WEB_PORT`, `DB_PORT`
 
 **Note**: After changing `.env`, restart the services with `docker compose restart`

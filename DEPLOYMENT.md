@@ -64,7 +64,7 @@ Available configuration options:
 - `POSTGRES_USER`: Database username (default: wasthere_user)
 - `POSTGRES_PASSWORD`: Database password (**MUST BE SET** - no default)
 - `CORS_ORIGINS`: Comma-separated list of allowed frontend origins (default: http://www.wasthere.co.uk,https://www.wasthere.co.uk,http://localhost,http://localhost:5173,http://localhost:3000)
-- `VITE_API_URL`: Frontend API URL (default: http://www.wasthere.co.uk:5000/api)
+- `VITE_API_URL`: Frontend API URL (default: http://www.wasthere.co.uk:5000/api) - **IMPORTANT**: Use domain name, not IP address, to avoid CORS errors
 - `DB_PORT`: Database port (default: 5432)
 - `API_PORT`: API port (default: 5000)
 - `WEB_PORT`: Web frontend port (default: 80)
@@ -75,6 +75,7 @@ Available configuration options:
 - Consider using Docker secrets for sensitive data in production
 - Remove or change the DB_PORT mapping to not expose PostgreSQL externally
 - **Update `CORS_ORIGINS`** to match your actual domain(s), e.g., `CORS_ORIGINS=http://www.wasthere.co.uk,https://www.wasthere.co.uk`
+- **Always use domain names (not IP addresses)** for `VITE_API_URL` to prevent CORS errors between frontend and API
 
 ### Verify Configuration
 

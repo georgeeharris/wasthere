@@ -60,9 +60,9 @@ docker compose down -v
 ```
 
 The application will be available at:
-- **Frontend**: http://localhost
-- **API**: http://localhost:5000
-- **Swagger UI**: http://localhost:5000/swagger
+- **Frontend**: http://www.wasthere.co.uk (production) or http://localhost (local)
+- **API**: http://www.wasthere.co.uk:5000 (production) or http://localhost:5000 (local)
+- **Swagger UI**: http://www.wasthere.co.uk:5000/swagger (production) or http://localhost:5000/swagger (local)
 
 **Important**: You must set a secure `POSTGRES_PASSWORD` in the `.env` file before running.
 
@@ -77,9 +77,9 @@ cp .env.example .env
 
 Key configuration options:
 - `POSTGRES_PASSWORD`: Required - Set a strong database password
-- `CORS_ORIGINS`: Comma-separated list of allowed frontend origins (default: localhost)
-  - For production with an IP address: `CORS_ORIGINS=http://82.165.153.98`
-  - For production with a domain: `CORS_ORIGINS=http://yourdomain.com,https://yourdomain.com`
+- `CORS_ORIGINS`: Comma-separated list of allowed frontend origins (default: www.wasthere.co.uk)
+  - For production with a domain: `CORS_ORIGINS=http://www.wasthere.co.uk,https://www.wasthere.co.uk`
+  - For local development: `CORS_ORIGINS=http://localhost,http://localhost:5173,http://localhost:3000`
 - `VITE_API_URL`: Frontend API endpoint URL
 - Ports: `API_PORT`, `WEB_PORT`, `DB_PORT`
 

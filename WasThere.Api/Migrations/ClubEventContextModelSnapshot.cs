@@ -127,6 +127,9 @@ namespace WasThere.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ThumbnailPath")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("UploadedAt")
                         .HasColumnType("timestamp with time zone");
 

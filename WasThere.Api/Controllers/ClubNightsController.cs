@@ -22,6 +22,7 @@ public class ClubNightsController : ControllerBase
         var clubNights = await _context.ClubNights
             .Include(cn => cn.Event)
             .Include(cn => cn.Venue)
+            .Include(cn => cn.Flyer)
             .Include(cn => cn.ClubNightActs)
                 .ThenInclude(cna => cna.Act)
             .Select(cn => new
@@ -32,6 +33,8 @@ public class ClubNightsController : ControllerBase
                 EventName = cn.Event!.Name,
                 VenueId = cn.VenueId,
                 VenueName = cn.Venue!.Name,
+                FlyerId = cn.FlyerId,
+                FlyerThumbnailPath = cn.Flyer != null ? cn.Flyer.ThumbnailPath : null,
                 Acts = cn.ClubNightActs.Select(cna => new
                 {
                     cna.ActId,

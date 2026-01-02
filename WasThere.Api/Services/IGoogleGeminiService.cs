@@ -26,6 +26,9 @@ public class ClubNightData
     public int? Month { get; set; }
     public int? Day { get; set; }
     
+    // Candidate years for user selection (populated after analysis)
+    public List<int> CandidateYears { get; set; } = new();
+    
     public List<ActData> Acts { get; set; } = new();
 }
 

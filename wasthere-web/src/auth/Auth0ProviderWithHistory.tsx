@@ -24,8 +24,8 @@ const Auth0ProviderWithHistory = ({ children }: Auth0ProviderWithHistoryProps) =
   }
 
   const onRedirectCallback = (appState?: { returnTo?: string }) => {
-    // Navigate to the returnTo route after successful login, or default to root
-    navigate(appState?.returnTo || window.location.pathname);
+    // Navigate to the returnTo route after successful login, or default to timeline
+    navigate(appState?.returnTo || '/timeline');
   };
 
   return (

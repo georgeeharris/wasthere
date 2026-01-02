@@ -182,10 +182,12 @@ curl -X OPTIONS http://www.wasthere.co.uk:5000/api/events \
 
 1. **Production**: Only include the actual production domains in CORS origins
 2. **Remove localhost origins**: Remove all `localhost` entries from production `.env`
-3. **HTTPS**: Use HTTPS in production for security
+3. **HTTPS**: Use HTTPS in production for security - see [HTTPS Setup Guide](HTTPS-SETUP.md) for instructions
 4. **Wildcards**: Avoid using wildcards (`*`) in CORS origins for production
+5. **Update URLs**: When HTTPS is enabled, update `VITE_API_URL` and `CORS_ORIGINS` to use `https://` protocol
 
 ## References
 
 - [MDN: CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)
 - [ASP.NET Core CORS Documentation](https://learn.microsoft.com/en-us/aspnet/core/security/cors)
+- [WasThere HTTPS Setup Guide](HTTPS-SETUP.md)

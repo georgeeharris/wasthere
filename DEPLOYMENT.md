@@ -64,10 +64,13 @@ Available configuration options:
 - `POSTGRES_USER`: Database username (default: wasthere_user)
 - `POSTGRES_PASSWORD`: Database password (**MUST BE SET** - no default)
 - `CORS_ORIGINS`: Comma-separated list of allowed frontend origins (default: http://www.wasthere.co.uk,https://www.wasthere.co.uk,http://localhost,http://localhost:5173,http://localhost:3000)
-- `VITE_API_URL`: Frontend API URL (default: http://www.wasthere.co.uk:5000/api) - **IMPORTANT**: Use domain name, not IP address, to avoid CORS errors
+- `VITE_API_URL`: Frontend API URL (default: http://www.wasthere.co.uk:5000/api) - **IMPORTANT**: Use domain name, not IP address, to avoid CORS errors. Use `https://` when SSL is enabled.
 - `DB_PORT`: Database port (default: 5432)
 - `API_PORT`: API port (default: 5000)
 - `WEB_PORT`: Web frontend port (default: 80)
+- `WEB_HTTPS_PORT`: HTTPS port (default: 443) - See [HTTPS Setup Guide](HTTPS-SETUP.md)
+
+**HTTPS/SSL Configuration**: To enable secure HTTPS connections, see the [HTTPS Setup Guide](HTTPS-SETUP.md) for detailed instructions on obtaining and configuring SSL certificates (Let's Encrypt or IONOS).
 
 **Security Note**: For production deployments:
 - Use a strong, randomly generated password (e.g., `openssl rand -base64 32`)
@@ -76,6 +79,7 @@ Available configuration options:
 - Remove or change the DB_PORT mapping to not expose PostgreSQL externally
 - **Update `CORS_ORIGINS`** to match your actual domain(s), e.g., `CORS_ORIGINS=http://www.wasthere.co.uk,https://www.wasthere.co.uk`
 - **Always use domain names (not IP addresses)** for `VITE_API_URL` to prevent CORS errors between frontend and API
+- **Enable HTTPS** for production deployments - see [HTTPS Setup Guide](HTTPS-SETUP.md)
 
 ### Verify Configuration
 
@@ -108,6 +112,8 @@ The application will be available at:
 - **Frontend**: http://www.wasthere.co.uk (or http://localhost for local development)
 - **API**: http://www.wasthere.co.uk:5000 (or http://localhost:5000 for local development)
 - **Swagger UI**: http://www.wasthere.co.uk:5000/swagger (or http://localhost:5000/swagger for local development)
+
+**Note**: For HTTPS/SSL setup, see [HTTPS Setup Guide](HTTPS-SETUP.md). After enabling HTTPS, use `https://www.wasthere.co.uk` instead.
 
 ## Step 5: Verify Deployment
 
@@ -256,8 +262,8 @@ docker compose up -d
 For production deployments:
 
 1. **Change default passwords**: Edit `.env` and update `POSTGRES_PASSWORD`
-2. **Use HTTPS**: Configure a reverse proxy (nginx/Apache) with SSL certificates
-3. **Firewall rules**: Only expose necessary ports (80/443)
+2. **Use HTTPS**: Enable SSL/TLS encryption - see [HTTPS Setup Guide](HTTPS-SETUP.md) for detailed instructions
+3. **Firewall rules**: Only expose necessary ports (80/443 for web, 5000 for API)
 4. **Regular updates**: Keep Docker and application images updated
 5. **Backup strategy**: Implement regular database backups
 

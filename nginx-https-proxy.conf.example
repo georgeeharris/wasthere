@@ -1,0 +1,130 @@
+# Advanced nginx Configuration with HTTPS Reverse Proxy
+# This configuration shows how to use nginx as a reverse proxy for both frontend and API
+# Benefits: Single HTTPS endpoint, no CORS issues, better performance
+
+# HTTP Server - Redirect all HTTP traffic to HTTPS
+server {
+    listen 80;
+    server_name www.wasthere.co.uk;
+    
+    # Redirect all HTTP requests to HTTPS
+    return 301 https://$host$request_uri;
+}
+
+# HTTPS Server - Main application endpoint
+server {
+    listen 443 ssl http2;
+    server_name www.wasthere.co.uk;
+    
+    # SSL Certificate Configuration
+    ssl_certificate /etc/letsencrypt/live/www.wasthere.co.uk/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/www.wasthere.co.uk/privkey.pem;
+    
+    # SSL Configuration - Modern, Secure Settings
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384';
+    ssl_prefer_server_ciphers off;
+    
+    # SSL Optimization
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_session_tickets off;
+    
+    # OCSP Stapling
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    resolver 8.8.8.8 8.8.4.4 valid=300s;
+    resolver_timeout 5s;
+    
+    # Security Headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    
+    # Enable gzip compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/javascript application/json;
+    
+    # Proxy settings for backend
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    
+    # API endpoints - Proxy to backend
+    location /api/ {
+        # Proxy to the API container
+        proxy_pass http://api:5000/api/;
+        
+        # WebSocket support (if needed in future)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        
+        # Timeouts for long-running API calls (e.g., AI processing)
+        proxy_connect_timeout 300s;
+        proxy_send_timeout 300s;
+        proxy_read_timeout 300s;
+    }
+    
+    # Swagger UI - Proxy to backend
+    location /swagger {
+        proxy_pass http://api:5000/swagger;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    # API uploads - Proxy to backend static files
+    location /uploads/ {
+        proxy_pass http://api:5000/uploads/;
+        proxy_set_header Host $host;
+        
+        # Cache uploaded images
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    # Frontend - Serve static files
+    root /usr/share/nginx/html;
+    index index.html;
+    
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-cache";
+    }
+    
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+
+# Configuration Notes:
+#
+# 1. This configuration uses nginx as a reverse proxy, eliminating CORS issues
+#    since frontend and API are served from the same origin (www.wasthere.co.uk)
+#
+# 2. To use this configuration:
+#    - Replace the default nginx.conf with this file
+#    - Update VITE_API_URL to: https://www.wasthere.co.uk/api (no port needed)
+#    - Update CORS_ORIGINS to: https://www.wasthere.co.uk (single origin)
+#    - Ensure API container is named 'api' and on same Docker network
+#    - Ensure port 5000 is NOT exposed externally (remove from docker-compose.yml)
+#
+# 3. Benefits:
+#    - No CORS configuration needed
+#    - Single SSL certificate for everything
+#    - Better security (API not directly exposed)
+#    - Improved performance (SSL termination at proxy)
+#
+# 4. Trade-offs:
+#    - More complex nginx configuration
+#    - Requires nginx restart for API routing changes
+#    - Direct API access on port 5000 not available (must use /api/ path)

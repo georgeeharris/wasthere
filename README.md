@@ -64,6 +64,8 @@ The application will be available at:
 - **API**: http://www.wasthere.co.uk:5000 (production) or http://localhost:5000 (local)
 - **Swagger UI**: http://www.wasthere.co.uk:5000/swagger (production) or http://localhost:5000/swagger (local)
 
+**HTTPS**: To enable HTTPS/SSL for secure connections, see [HTTPS Setup Guide](HTTPS-SETUP.md) for detailed instructions on obtaining and configuring SSL certificates.
+
 **Important**: You must set a secure `POSTGRES_PASSWORD` in the `.env` file before running.
 
 #### Configuration
@@ -82,7 +84,9 @@ Key configuration options:
   - For local development: `CORS_ORIGINS=http://localhost,http://localhost:5173,http://localhost:3000`
 - `VITE_API_URL`: Frontend API endpoint URL
   - **Important**: Always use domain names, not IP addresses (e.g., `http://www.wasthere.co.uk:5000/api` not `http://82.165.153.98:5000/api`) to avoid CORS errors
+  - Use `https://` protocol when SSL/HTTPS is enabled
 - Ports: `API_PORT`, `WEB_PORT`, `DB_PORT`
+- HTTPS/SSL: `WEB_HTTPS_PORT` (default: 443), see [HTTPS Setup Guide](HTTPS-SETUP.md) for full SSL configuration
 
 **Note**: After changing `.env`, restart the services with `docker compose restart`
 

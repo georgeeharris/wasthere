@@ -29,6 +29,8 @@ export function Pagination({
   const getPageNumbers = () => {
     const pages: (number | string)[] = [];
     const maxVisible = 7;
+    const pagesAroundCurrent = 1; // Number of pages to show before and after current page
+    const ellipsisThreshold = 3; // Show ellipsis if gap is more than this
 
     if (totalPages <= maxVisible) {
       // Show all pages if there are few enough
@@ -39,19 +41,19 @@ export function Pagination({
       // Always show first page
       pages.push(1);
 
-      if (currentPage > 3) {
+      if (currentPage > ellipsisThreshold) {
         pages.push('...');
       }
 
       // Show pages around current page
-      const start = Math.max(2, currentPage - 1);
-      const end = Math.min(totalPages - 1, currentPage + 1);
+      const start = Math.max(2, currentPage - pagesAroundCurrent);
+      const end = Math.min(totalPages - 1, currentPage + pagesAroundCurrent);
 
       for (let i = start; i <= end; i++) {
         pages.push(i);
       }
 
-      if (currentPage < totalPages - 2) {
+      if (currentPage < totalPages - (ellipsisThreshold - 1)) {
         pages.push('...');
       }
 
@@ -95,7 +97,7 @@ export function Pagination({
                 {page}
               </button>
             ) : (
-              <span key={`ellipsis-${index}`} className="pagination-ellipsis" aria-hidden="true">
+              <span key={`ellipsis-${currentPage}-${index}`} className="pagination-ellipsis" aria-hidden="true">
                 {page}
               </span>
             )

@@ -25,9 +25,9 @@ export function usePagination<T>({
   const totalItems = items.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
-  // Reset to page 1 if current page exceeds total pages
+  // Reset to valid page if current page exceeds total pages
   useEffect(() => {
-    if (totalPages > 0 && currentPage > totalPages) {
+    if (currentPage > totalPages) {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);

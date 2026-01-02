@@ -1,4 +1,4 @@
-import type { Event, Venue, Act, ClubNight, ClubNightDto, Flyer, DiagnosticInfo } from '../types';
+import type { Event, Venue, Act, ClubNight, ClubNightDto, Flyer, DiagnosticInfo, FlyerAnalysisResult } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -203,6 +203,35 @@ export const flyersApi = {
     // Convert relative path to API URL
     return `${API_BASE_URL.replace('/api', '')}/${filePath.replace(/\\/g, '/')}`;
   },
+  
+  completeUpload: async (flyerId: number, selectedYears: YearSelection[]): Promise<AutoPopulateResult> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/flyers/${flyerId}/complete-upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selectedYears }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to complete upload');
+      }
+
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Request timed out. The operation is taking longer than expected. Please try again.');
+      }
+      throw error;
+    }
+  },
 };
 
 export interface FlyerUploadResponse {
@@ -211,6 +240,13 @@ export interface FlyerUploadResponse {
   flyer?: Flyer;
   autoPopulateResult?: AutoPopulateResult;
   diagnostics?: DiagnosticInfo;
+  analysisResult?: FlyerAnalysisResult;
+}
+
+export interface YearSelection {
+  month: number;
+  day: number;
+  year: number;
 }
 
 export interface AutoPopulateResult {

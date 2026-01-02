@@ -71,3 +71,26 @@ export interface DiagnosticInfo {
   errorMessage?: string | null;
   stackTrace?: string | null;
 }
+
+export interface ClubNightData {
+  eventName?: string | null;
+  venueName?: string | null;
+  date?: string | null;
+  dayOfWeek?: string | null;
+  month?: number | null;
+  day?: number | null;
+  candidateYears: number[];
+  acts: ActData[];
+}
+
+export interface ActData {
+  name: string;
+  isLiveSet: boolean;
+}
+
+export interface FlyerAnalysisResult {
+  success: boolean;
+  errorMessage?: string | null;
+  clubNights: ClubNightData[];
+  diagnostics: DiagnosticInfo;
+}

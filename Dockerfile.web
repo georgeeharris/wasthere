@@ -2,9 +2,16 @@
 FROM node:18-alpine AS build
 WORKDIR /app
 
-# Accept build argument for API URL
+# Accept build arguments for API URL and Auth0 configuration
 ARG VITE_API_URL=http://localhost:5000/api
+ARG VITE_AUTH0_DOMAIN
+ARG VITE_AUTH0_CLIENT_ID
+ARG VITE_AUTH0_AUDIENCE
+
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_AUTH0_DOMAIN=$VITE_AUTH0_DOMAIN
+ENV VITE_AUTH0_CLIENT_ID=$VITE_AUTH0_CLIENT_ID
+ENV VITE_AUTH0_AUDIENCE=$VITE_AUTH0_AUDIENCE
 
 # Copy package files
 COPY wasthere-web/package*.json ./

@@ -2,6 +2,53 @@ import type { Event, Venue, Act, ClubNight, ClubNightDto, Flyer, DiagnosticInfo,
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
+// Token provider function that will be set by the app
+let getAccessTokenFunction: (() => Promise<string | null>) | null = null;
+
+export const setAccessTokenProvider = (provider: () => Promise<string | null>) => {
+  getAccessTokenFunction = provider;
+};
+
+// Helper function to create authenticated fetch headers
+const getAuthHeaders = async (): Promise<HeadersInit> => {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+
+  if (getAccessTokenFunction) {
+    try {
+      const token = await getAccessTokenFunction();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error('Error getting access token:', error);
+    }
+  }
+
+  return headers;
+};
+
+// Helper function for authenticated fetch
+const authenticatedFetch = async (url: string, options: RequestInit = {}): Promise<Response> => {
+  const authHeaders = await getAuthHeaders();
+  
+  const mergedHeaders = {
+    ...authHeaders,
+    ...options.headers,
+  };
+
+  // Remove Content-Type for FormData
+  if (options.body instanceof FormData) {
+    delete (mergedHeaders as Record<string, string>)['Content-Type'];
+  }
+
+  return fetch(url, {
+    ...options,
+    headers: mergedHeaders,
+  });
+};
+
 // Events API
 export const eventsApi = {
   getAll: async (): Promise<Event[]> => {
@@ -10,24 +57,22 @@ export const eventsApi = {
   },
   
   create: async (name: string): Promise<Event> => {
-    const response = await fetch(`${API_BASE_URL}/events`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/events`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     });
     return response.json();
   },
   
   update: async (id: number, name: string): Promise<void> => {
-    await fetch(`${API_BASE_URL}/events/${id}`, {
+    await authenticatedFetch(`${API_BASE_URL}/events/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, name }),
     });
   },
   
   delete: async (id: number): Promise<void> => {
-    await fetch(`${API_BASE_URL}/events/${id}`, {
+    await authenticatedFetch(`${API_BASE_URL}/events/${id}`, {
       method: 'DELETE',
     });
   },
@@ -36,29 +81,27 @@ export const eventsApi = {
 // Venues API
 export const venuesApi = {
   getAll: async (): Promise<Venue[]> => {
-    const response = await fetch(`${API_BASE_URL}/venues`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/venues`);
     return response.json();
   },
   
   create: async (name: string): Promise<Venue> => {
-    const response = await fetch(`${API_BASE_URL}/venues`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/venues`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     });
     return response.json();
   },
   
   update: async (id: number, name: string): Promise<void> => {
-    await fetch(`${API_BASE_URL}/venues/${id}`, {
+    await authenticatedFetch(`${API_BASE_URL}/venues/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, name }),
     });
   },
   
   delete: async (id: number): Promise<void> => {
-    await fetch(`${API_BASE_URL}/venues/${id}`, {
+    await authenticatedFetch(`${API_BASE_URL}/venues/${id}`, {
       method: 'DELETE',
     });
   },
@@ -67,29 +110,27 @@ export const venuesApi = {
 // Acts API
 export const actsApi = {
   getAll: async (): Promise<Act[]> => {
-    const response = await fetch(`${API_BASE_URL}/acts`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/acts`);
     return response.json();
   },
   
   create: async (name: string): Promise<Act> => {
-    const response = await fetch(`${API_BASE_URL}/acts`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/acts`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     });
     return response.json();
   },
   
   update: async (id: number, name: string): Promise<void> => {
-    await fetch(`${API_BASE_URL}/acts/${id}`, {
+    await authenticatedFetch(`${API_BASE_URL}/acts/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, name }),
     });
   },
   
   delete: async (id: number): Promise<void> => {
-    await fetch(`${API_BASE_URL}/acts/${id}`, {
+    await authenticatedFetch(`${API_BASE_URL}/acts/${id}`, {
       method: 'DELETE',
     });
   },
@@ -103,24 +144,22 @@ export const clubNightsApi = {
   },
   
   create: async (dto: ClubNightDto): Promise<ClubNight> => {
-    const response = await fetch(`${API_BASE_URL}/clubnights`, {
+    const response = await authenticatedFetch(`${API_BASE_URL}/clubnights`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dto),
     });
     return response.json();
   },
   
   update: async (id: number, dto: ClubNightDto): Promise<void> => {
-    await fetch(`${API_BASE_URL}/clubnights/${id}`, {
+    await authenticatedFetch(`${API_BASE_URL}/clubnights/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(dto),
     });
   },
   
   delete: async (id: number): Promise<void> => {
-    await fetch(`${API_BASE_URL}/clubnights/${id}`, {
+    await authenticatedFetch(`${API_BASE_URL}/clubnights/${id}`, {
       method: 'DELETE',
     });
   },
@@ -129,7 +168,7 @@ export const clubNightsApi = {
 // Flyers API
 export const flyersApi = {
   getAll: async (): Promise<Flyer[]> => {
-    const response = await fetch(`${API_BASE_URL}/flyers`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/flyers`);
     return response.json();
   },
   
@@ -142,7 +181,7 @@ export const flyersApi = {
     const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes
 
     try {
-      const response = await fetch(`${API_BASE_URL}/flyers/upload`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/flyers/upload`, {
         method: 'POST',
         body: formData,
         signal: controller.signal,
@@ -166,7 +205,7 @@ export const flyersApi = {
   },
   
   delete: async (id: number): Promise<void> => {
-    await fetch(`${API_BASE_URL}/flyers/${id}`, {
+    await authenticatedFetch(`${API_BASE_URL}/flyers/${id}`, {
       method: 'DELETE',
     });
   },
@@ -177,7 +216,7 @@ export const flyersApi = {
     const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes
 
     try {
-      const response = await fetch(`${API_BASE_URL}/flyers/${id}/auto-populate`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/flyers/${id}/auto-populate`, {
         method: 'POST',
         signal: controller.signal,
       });
@@ -209,9 +248,8 @@ export const flyersApi = {
     const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes
 
     try {
-      const response = await fetch(`${API_BASE_URL}/flyers/${flyerId}/complete-upload`, {
+      const response = await authenticatedFetch(`${API_BASE_URL}/flyers/${flyerId}/complete-upload`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ selectedYears }),
         signal: controller.signal,
       });

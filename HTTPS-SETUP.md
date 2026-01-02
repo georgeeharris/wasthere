@@ -168,8 +168,6 @@ WEB_HTTPS_PORT=443
 
 ### Step 8: Start WasThere with HTTPS
 
-### Step 8: Start WasThere with HTTPS
-
 ```bash
 cd ~/wasthere  # Or your application directory
 

@@ -39,11 +39,6 @@ export function YearSelectionModal({ clubNights, onConfirm, onCancel }: YearSele
     return null;
   }
 
-  // Get day of week suffix
-  // const getDayOfWeekText = (dayOfWeek?: string | null) => {
-  //   return dayOfWeek ? ` (${dayOfWeek})` : '';
-  // };
-
   // Format month name
   const getMonthName = (month: number) => {
     const monthNames = [

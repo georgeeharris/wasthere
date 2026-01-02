@@ -122,7 +122,7 @@ public class FlyersController : ControllerBase
         // Populate candidate years for each club night
         foreach (var clubNightData in analysisResult.ClubNights)
         {
-            // If full date with year is already present, no need for candidates
+            // Only generate candidate years if full date is not present
             if (!clubNightData.Date.HasValue && clubNightData.Month.HasValue && clubNightData.Day.HasValue)
             {
                 var candidateYears = _yearInferenceService.GetCandidateYears(
@@ -259,12 +259,18 @@ public class FlyersController : ControllerBase
         _context.Flyers.Add(flyer);
         await _context.SaveChangesAsync();
 
+        // Check if any club nights have candidate years that need selection
+        var needsYearSelection = analysisResult.ClubNights.Any(cn => cn.CandidateYears.Count > 0);
+        var message = needsYearSelection 
+            ? "Flyer uploaded and analyzed successfully. Please select years for the dates."
+            : "Flyer uploaded and analyzed successfully.";
+
         // Return response with analysis result containing candidate years
-        // Do NOT create club nights yet - user needs to select years first
+        // Do NOT create club nights yet - user needs to select years first if needed
         var response = new FlyerUploadResponse
         {
             Success = true,
-            Message = "Flyer uploaded and analyzed successfully. Please select years for the dates.",
+            Message = message,
             Flyer = await _context.Flyers
                 .Include(f => f.Event)
                 .Include(f => f.Venue)

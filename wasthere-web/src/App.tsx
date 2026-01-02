@@ -14,7 +14,12 @@ import { setAccessTokenProvider } from './services/api';
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, loginWithRedirect, logout, isLoading, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated, loginWithRedirect, logout, isLoading, getAccessTokenSilently, user } = useAuth0();
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Auth State:', { isAuthenticated, isLoading, user: user?.email });
+  }, [isAuthenticated, isLoading, user]);
 
   // Setup the access token provider for API calls
   useEffect(() => {

@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import type { Flyer, DiagnosticInfo } from '../types';
 import { flyersApi, type AutoPopulateResult } from '../services/api';
 import { ErrorDiagnostics } from './ErrorDiagnostics';
+import { usePagination } from '../hooks/usePagination';
+import { Pagination } from './Pagination';
 
 export function FlyerList() {
   const [flyers, setFlyers] = useState<Flyer[]>([]);
@@ -11,6 +13,16 @@ export function FlyerList() {
   const [diagnostics, setDiagnostics] = useState<DiagnosticInfo | undefined>(undefined);
   const [autoPopulating, setAutoPopulating] = useState<number | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const {
+    currentPage,
+    pageSize,
+    paginatedItems,
+    totalPages,
+    totalItems,
+    setPage,
+    setPageSize,
+  } = usePagination({ items: flyers, initialPageSize: 12 });
 
   useEffect(() => {
     loadFlyers();
@@ -193,7 +205,7 @@ export function FlyerList() {
         {flyers.length === 0 ? (
           <div className="empty-state">No flyers uploaded yet.</div>
         ) : (
-          flyers.map((flyer) => (
+          paginatedItems.map((flyer) => (
             <div key={flyer.id} className="flyer-card">
               <div className="flyer-image-container">
                 <img
@@ -230,6 +242,18 @@ export function FlyerList() {
           ))
         )}
       </div>
+
+      {flyers.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+          pageSizeOptions={[12, 24, 48, 96]}
+        />
+      )}
     </div>
     </>
   );

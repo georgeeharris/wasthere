@@ -12,6 +12,12 @@ window.addEventListener('error', (event) => {
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason);
 });
+
+// Debug: Check if we're in a callback
+console.log('Current URL:', window.location.href);
+console.log('Has code param:', new URLSearchParams(window.location.search).has('code'));
+console.log('Has state param:', new URLSearchParams(window.location.search).has('state'));
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>

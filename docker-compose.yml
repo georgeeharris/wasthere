@@ -60,11 +60,10 @@ services:
       - "${WEB_HTTPS_PORT:-443}:443"
     volumes:
       # SSL Certificate volumes - mount your certificates here
-      # Uncomment the appropriate line based on your certificate location:
-      # For Let's Encrypt certificates (most common):
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      # For custom certificates (e.g., IONOS), uncomment this line instead:
-      # - /etc/ssl/wasthere:/etc/ssl/wasthere:ro
+      # For Let's Encrypt certificates:
+      # - /etc/letsencrypt:/etc/letsencrypt:ro
+      # For custom certificates (IONOS):
+      - /etc/ssl/wasthere:/etc/ssl/wasthere:ro
     depends_on:
       - api
     restart: unless-stopped

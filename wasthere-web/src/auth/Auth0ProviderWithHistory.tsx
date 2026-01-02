@@ -12,6 +12,13 @@ const Auth0ProviderWithHistory = ({ children }: Auth0ProviderWithHistoryProps) =
   const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
   const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
+  console.log('Auth0 Config:', {
+    domain,
+    clientId: clientId ? `${clientId.substring(0, 10)}...` : 'missing',
+    audience,
+    hasAll: !!(domain && clientId)
+  });
+
   if (!domain || !clientId) {
     console.warn(
       'Auth0 not configured properly. Please set the following environment variables:\n' +
@@ -37,6 +44,8 @@ const Auth0ProviderWithHistory = ({ children }: Auth0ProviderWithHistoryProps) =
         audience: audience,
       }}
       onRedirectCallback={onRedirectCallback}
+      useRefreshTokens={true}
+      cacheLocation="localstorage"
     >
       {children}
     </Auth0Provider>

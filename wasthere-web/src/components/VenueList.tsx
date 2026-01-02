@@ -1,12 +1,24 @@
 import { useState, useEffect } from 'react';
 import type { Venue } from '../types';
 import { venuesApi } from '../services/api';
+import { usePagination } from '../hooks/usePagination';
+import { Pagination } from './Pagination';
 
 export function VenueList() {
   const [venues, setVenues] = useState<Venue[]>([]);
   const [newVenueName, setNewVenueName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
+
+  const {
+    currentPage,
+    pageSize,
+    paginatedItems,
+    totalPages,
+    totalItems,
+    setPage,
+    setPageSize,
+  } = usePagination({ items: venues, initialPageSize: 10 });
 
   useEffect(() => {
     loadVenues();
@@ -79,7 +91,7 @@ export function VenueList() {
       </form>
 
       <ul className="list">
-        {venues.map((venue) => (
+        {paginatedItems.map((venue) => (
           <li key={venue.id} className="list-item">
             {editingId === venue.id ? (
               <div className="edit-form">
@@ -112,6 +124,15 @@ export function VenueList() {
           </li>
         ))}
       </ul>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }

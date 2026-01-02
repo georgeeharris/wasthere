@@ -1,12 +1,24 @@
 import { useState, useEffect } from 'react';
 import type { Act } from '../types';
 import { actsApi } from '../services/api';
+import { usePagination } from '../hooks/usePagination';
+import { Pagination } from './Pagination';
 
 export function ActList() {
   const [acts, setActs] = useState<Act[]>([]);
   const [newActName, setNewActName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
+
+  const {
+    currentPage,
+    pageSize,
+    paginatedItems,
+    totalPages,
+    totalItems,
+    setPage,
+    setPageSize,
+  } = usePagination({ items: acts, initialPageSize: 10 });
 
   useEffect(() => {
     loadActs();
@@ -79,7 +91,7 @@ export function ActList() {
       </form>
 
       <ul className="list">
-        {acts.map((act) => (
+        {paginatedItems.map((act) => (
           <li key={act.id} className="list-item">
             {editingId === act.id ? (
               <div className="edit-form">
@@ -112,6 +124,15 @@ export function ActList() {
           </li>
         ))}
       </ul>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }

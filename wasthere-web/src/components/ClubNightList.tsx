@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import type { ClubNight, Event, Venue, Act, ClubNightActDto } from '../types';
 import { clubNightsApi, eventsApi, venuesApi, actsApi } from '../services/api';
 import { ActSelector } from './ActSelector';
+import { usePagination } from '../hooks/usePagination';
+import { Pagination } from './Pagination';
 
 export function ClubNightList() {
   const [clubNights, setClubNights] = useState<ClubNight[]>([]);
@@ -17,6 +19,16 @@ export function ClubNightList() {
     venueId: 0,
     acts: [] as ClubNightActDto[],
   });
+
+  const {
+    currentPage,
+    pageSize,
+    paginatedItems,
+    totalPages,
+    totalItems,
+    setPage,
+    setPageSize,
+  } = usePagination({ items: clubNights, initialPageSize: 10 });
 
   useEffect(() => {
     loadAll();
@@ -183,7 +195,7 @@ export function ClubNightList() {
         {clubNights.length === 0 ? (
           <p className="empty-state">No club nights yet. Add one above!</p>
         ) : (
-          clubNights.map((clubNight) => (
+          paginatedItems.map((clubNight) => (
             <div key={clubNight.id} className="club-night-card">
               <div className="club-night-header">
                 <div>
@@ -219,6 +231,17 @@ export function ClubNightList() {
           ))
         )}
       </div>
+
+      {clubNights.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          totalItems={totalItems}
+          onPageChange={setPage}
+          onPageSizeChange={setPageSize}
+        />
+      )}
     </div>
   );
 }

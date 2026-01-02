@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import type { Event } from '../types';
 import { eventsApi } from '../services/api';
+import { usePagination } from '../hooks/usePagination';
+import { Pagination } from './Pagination';
 
 interface EventListProps {
   onEventSelect?: (event: Event) => void;
@@ -11,6 +13,16 @@ export function EventList(_props: EventListProps) {
   const [newEventName, setNewEventName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
+
+  const {
+    currentPage,
+    pageSize,
+    paginatedItems,
+    totalPages,
+    totalItems,
+    setPage,
+    setPageSize,
+  } = usePagination({ items: events, initialPageSize: 10 });
 
   useEffect(() => {
     loadEvents();
@@ -83,7 +95,7 @@ export function EventList(_props: EventListProps) {
       </form>
 
       <ul className="list">
-        {events.map((event) => (
+        {paginatedItems.map((event) => (
           <li key={event.id} className="list-item">
             {editingId === event.id ? (
               <div className="edit-form">
@@ -116,6 +128,15 @@ export function EventList(_props: EventListProps) {
           </li>
         ))}
       </ul>
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        pageSize={pageSize}
+        totalItems={totalItems}
+        onPageChange={setPage}
+        onPageSizeChange={setPageSize}
+      />
     </div>
   );
 }

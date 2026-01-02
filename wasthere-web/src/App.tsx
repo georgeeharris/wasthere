@@ -99,24 +99,14 @@ function App() {
       <main className="app-main">
         <Routes>
           <Route path="/timeline" element={<Timeline />} />
-          <Route path="/nights" element={
-            <ProtectedRoute>
-              <ClubNightList />
-            </ProtectedRoute>
-          } />
-          <Route path="/flyers" element={
-            <ProtectedRoute>
-              <FlyerList />
-            </ProtectedRoute>
-          } />
+          <Route path="/nights" element={<ClubNightList />} />
+          <Route path="/flyers" element={<FlyerList />} />
           <Route path="/master" element={
-            <ProtectedRoute>
-              <div className="master-lists">
-                <EventList />
-                <VenueList />
-                <ActList />
-              </div>
-            </ProtectedRoute>
+            <div className="master-lists">
+              <EventList />
+              <VenueList />
+              <ActList />
+            </div>
           } />
           <Route path="/" element={<Navigate to="/timeline" replace />} />
         </Routes>

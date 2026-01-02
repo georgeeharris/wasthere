@@ -259,8 +259,8 @@ public class FlyersController : ControllerBase
         _context.Flyers.Add(flyer);
         await _context.SaveChangesAsync();
 
-        // Check if any club nights have candidate years that need selection
-        var needsYearSelection = analysisResult.ClubNights.Any(cn => cn.CandidateYears.Count > 0);
+        // Check if any club nights have multiple candidate years that need user selection
+        var needsYearSelection = analysisResult.ClubNights.Any(cn => cn.CandidateYears.Count > 1);
         var message = needsYearSelection 
             ? "Flyer uploaded and analyzed successfully. Please select years for the dates."
             : "Flyer uploaded and analyzed successfully.";

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 interface UsePaginationProps<T> {
   items: T[];
@@ -26,16 +26,17 @@ export function usePagination<T>({
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
   // Reset to page 1 if current page exceeds total pages
-  const validatedPage = Math.min(currentPage, totalPages);
-  if (validatedPage !== currentPage) {
-    setCurrentPage(validatedPage);
-  }
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   const paginatedItems = useMemo(() => {
-    const startIndex = (validatedPage - 1) * pageSize;
+    const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     return items.slice(startIndex, endIndex);
-  }, [items, validatedPage, pageSize]);
+  }, [items, currentPage, pageSize]);
 
   const handlePageChange = (page: number) => {
     if (page >= 1 && page <= totalPages) {
@@ -49,7 +50,7 @@ export function usePagination<T>({
   };
 
   return {
-    currentPage: validatedPage,
+    currentPage,
     pageSize,
     paginatedItems,
     totalPages,

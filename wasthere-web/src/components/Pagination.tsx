@@ -89,11 +89,13 @@ export function Pagination({
                 className={`pagination-btn pagination-page ${
                   currentPage === page ? 'active' : ''
                 }`}
+                aria-label={`Go to page ${page}`}
+                aria-current={currentPage === page ? 'page' : undefined}
               >
                 {page}
               </button>
             ) : (
-              <span key={index} className="pagination-ellipsis">
+              <span key={index} className="pagination-ellipsis" aria-hidden="true">
                 {page}
               </span>
             )

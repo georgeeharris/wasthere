@@ -116,7 +116,9 @@ sudo ls -la /etc/letsencrypt/live/www.wasthere.co.uk/
 
 ### Step 5: Update Docker Compose Configuration
 
-Edit your `docker-compose.yml` to mount the certificates and expose port 443:
+**Note**: The `docker-compose.yml` already includes HTTPS support (port 443 and certificate volume mounts). If you cloned the latest version, you can skip modifying `docker-compose.yml`.
+
+If needed, verify your `docker-compose.yml` has these settings:
 
 ```yaml
 services:
@@ -124,38 +126,54 @@ services:
     # ... existing configuration ...
     ports:
       - "${WEB_PORT:-80}:80"
-      - "${WEB_HTTPS_PORT:-443}:443"  # Add this line
+      - "${WEB_HTTPS_PORT:-443}:443"  # HTTPS port
     volumes:
-      - /etc/letsencrypt:/etc/letsencrypt:ro  # Add this line
+      # SSL Certificate volumes - already configured
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     # ... rest of configuration ...
 ```
 
-### Step 6: Configure Environment Variables
+### Step 6: Update nginx Configuration for HTTPS
 
-Edit your `.env` file to enable HTTPS:
+The repository includes a ready-to-use HTTPS configuration. Activate it:
 
 ```bash
-# Add these lines to your .env file
-WEB_HTTPS_PORT=443
-ENABLE_HTTPS=true
-SSL_CERT_PATH=/etc/letsencrypt/live/www.wasthere.co.uk/fullchain.pem
-SSL_KEY_PATH=/etc/letsencrypt/live/www.wasthere.co.uk/privkey.pem
+cd ~/wasthere  # Or your application directory
+
+# Backup the current nginx config
+cp nginx.conf nginx.conf.backup
+
+# Use the HTTPS-enabled configuration
+cp nginx-https-enabled.conf nginx.conf
+
+# If using custom certificate paths (e.g., IONOS), edit nginx.conf:
+nano nginx.conf
+# Update lines 23-24 or uncomment lines 27-28 for custom paths
 ```
 
-Also update your API and CORS URLs to use HTTPS:
+Alternatively, you can manually enable HTTPS in the existing `nginx.conf` by uncommenting the HTTPS server block (it has instructions in comments).
+
+### Step 7: Configure Environment Variables
+
+Edit your `.env` file to update API URL and CORS for HTTPS:
 
 ```bash
 # Update these existing variables in .env
 VITE_API_URL=https://www.wasthere.co.uk:5000/api
 CORS_ORIGINS=https://www.wasthere.co.uk,http://www.wasthere.co.uk,https://www.wasthere.co.uk:5000,http://www.wasthere.co.uk:5000,http://localhost,http://localhost:5173,http://localhost:3000
+
+# Optional: Add these for reference (not required for basic setup)
+WEB_HTTPS_PORT=443
 ```
 
-### Step 7: Start WasThere with HTTPS
+### Step 8: Start WasThere with HTTPS
+
+### Step 8: Start WasThere with HTTPS
 
 ```bash
 cd ~/wasthere  # Or your application directory
 
-# Rebuild the web container to pick up new nginx config
+# Rebuild the web container to pick up new nginx config and .env changes
 docker compose build web
 
 # Start all services
@@ -165,14 +183,14 @@ docker compose up -d
 docker compose logs -f web
 ```
 
-### Step 8: Test HTTPS
+### Step 9: Test HTTPS
 
 1. Open your browser to https://www.wasthere.co.uk
 2. Verify the padlock icon appears in the address bar
 3. Click the padlock to view certificate details
 4. Test that the application works correctly
 
-### Step 9: Set Up Automatic Renewal
+### Step 10: Set Up Automatic Renewal
 
 Let's Encrypt certificates expire after 90 days, but Certbot can auto-renew them.
 
@@ -342,9 +360,9 @@ sudo chmod 644 /etc/ssl/wasthere/fullchain.pem
 rm /tmp/*.crt /tmp/*.key
 ```
 
-### Step 4: Configure Docker Compose
+### Step 4: Configure Docker Compose and nginx
 
-Edit your `docker-compose.yml`:
+**Note**: The `docker-compose.yml` already includes HTTPS support. Verify your `docker-compose.yml` has:
 
 ```yaml
 services:
@@ -352,10 +370,29 @@ services:
     # ... existing configuration ...
     ports:
       - "${WEB_PORT:-80}:80"
-      - "${WEB_HTTPS_PORT:-443}:443"  # Add this line
+      - "${WEB_HTTPS_PORT:-443}:443"
     volumes:
-      - /etc/ssl/wasthere:/etc/ssl/wasthere:ro  # Add this line
+      # For IONOS/custom certificates:
+      - /etc/ssl/wasthere:/etc/ssl/wasthere:ro
     # ... rest of configuration ...
+```
+
+Update nginx configuration for HTTPS:
+
+```bash
+cd ~/wasthere  # Or your application directory
+
+# Backup the current nginx config
+cp nginx.conf nginx.conf.backup
+
+# Use the HTTPS-enabled configuration
+cp nginx-https-enabled.conf nginx.conf
+
+# Edit to use custom certificate paths
+nano nginx.conf
+# Uncomment lines 27-28 and comment out lines 23-24:
+# ssl_certificate /etc/ssl/wasthere/fullchain.pem;
+# ssl_certificate_key /etc/ssl/wasthere/privkey.pem;
 ```
 
 ### Step 5: Configure Environment Variables

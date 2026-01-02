@@ -13,7 +13,8 @@ server {
 
 # HTTPS Server - Main application endpoint
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name www.wasthere.co.uk;
     
     # SSL Certificate Configuration

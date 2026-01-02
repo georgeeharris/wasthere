@@ -19,6 +19,8 @@ public class FlyersController : ControllerBase
     private readonly IDateYearInferenceService _yearInferenceService;
     private const long MaxFileSize = 10 * 1024 * 1024; // 10MB
     private const string UploadsFolder = "uploads";
+    private const int ThumbnailWidth = 300;
+    private const int ThumbnailHeight = 400;
     private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
 
     public FlyersController(
@@ -213,7 +215,7 @@ public class FlyersController : ControllerBase
         var thumbnailFilePath = Path.Combine(finalUploadsPath, thumbnailFileName);
         try
         {
-            GenerateThumbnail(finalFilePath, thumbnailFilePath, 300, 400);
+            GenerateThumbnail(finalFilePath, thumbnailFilePath, ThumbnailWidth, ThumbnailHeight);
         }
         catch (Exception ex)
         {
@@ -666,12 +668,7 @@ public class FlyersController : ControllerBase
             resizeHeight = (int)(width / aspectRatio);
         }
         
-        image.Mutate(x => x
-            .Resize(new ResizeOptions
-            {
-                Size = new Size(resizeWidth, resizeHeight),
-                Mode = ResizeMode.Max
-            }));
+        image.Mutate(x => x.Resize(resizeWidth, resizeHeight));
         
         image.Save(thumbnailPath);
     }

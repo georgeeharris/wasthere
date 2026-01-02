@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { ClubNight, Event } from '../types';
 import { clubNightsApi, eventsApi } from '../services/api';
 
@@ -12,24 +12,7 @@ export function Timeline() {
     loadEvents();
   }, []);
 
-  useEffect(() => {
-    if (selectedEventId > 0) {
-      loadClubNights();
-    } else {
-      setClubNights([]);
-    }
-  }, [selectedEventId]);
-
-  const loadEvents = async () => {
-    try {
-      const eventsData = await eventsApi.getAll();
-      setEvents(eventsData);
-    } catch (error) {
-      console.error('Failed to load events:', error);
-    }
-  };
-
-  const loadClubNights = async () => {
+  const loadClubNights = useCallback(async () => {
     setLoading(true);
     try {
       const allClubNights = await clubNightsApi.getAll();
@@ -41,6 +24,23 @@ export function Timeline() {
       console.error('Failed to load club nights:', error);
     } finally {
       setLoading(false);
+    }
+  }, [selectedEventId]);
+
+  useEffect(() => {
+    if (selectedEventId > 0) {
+      loadClubNights();
+    } else {
+      setClubNights([]);
+    }
+  }, [selectedEventId, loadClubNights]);
+
+  const loadEvents = async () => {
+    try {
+      const eventsData = await eventsApi.getAll();
+      setEvents(eventsData);
+    } catch (error) {
+      console.error('Failed to load events:', error);
     }
   };
 

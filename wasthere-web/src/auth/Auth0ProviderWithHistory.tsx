@@ -11,7 +11,13 @@ const Auth0ProviderWithHistory = ({ children }: Auth0ProviderWithHistoryProps) =
   const audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
   if (!domain || !clientId) {
-    console.warn('Auth0 not configured - domain or clientId missing');
+    console.warn(
+      'Auth0 not configured properly. Please set the following environment variables:\n' +
+      `  VITE_AUTH0_DOMAIN: ${domain ? '✓' : '✗ Missing'}\n` +
+      `  VITE_AUTH0_CLIENT_ID: ${clientId ? '✓' : '✗ Missing'}\n` +
+      `  VITE_AUTH0_AUDIENCE: ${audience ? '✓' : '✗ Missing (optional)'}\n` +
+      'See AUTH0-SETUP.md for configuration instructions.'
+    );
     return <>{children}</>;
   }
 

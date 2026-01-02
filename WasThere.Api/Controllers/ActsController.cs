@@ -2,11 +2,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WasThere.Api.Data;
 using WasThere.Api.Models;
+using Microsoft.AspNetCore.Authorization;
 
 namespace WasThere.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class ActsController : ControllerBase
 {
     private readonly ClubEventContext _context;

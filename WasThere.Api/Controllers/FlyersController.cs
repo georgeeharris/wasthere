@@ -5,11 +5,13 @@ using WasThere.Api.Models;
 using WasThere.Api.Services;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
+using Microsoft.AspNetCore.Authorization;
 
 namespace WasThere.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class FlyersController : ControllerBase
 {
     private readonly ClubEventContext _context;

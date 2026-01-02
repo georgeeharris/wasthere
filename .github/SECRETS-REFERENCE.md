@@ -17,6 +17,9 @@ This document provides a quick reference for all GitHub Secrets needed for the C
 | `VPS_SSH_KEY` | Private SSH key (full content) | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
 | `POSTGRES_PASSWORD` | Database password (use strong password!) | Generate: `openssl rand -base64 32` |
 | `GOOGLE_GEMINI_API_KEY` | Google Gemini API key for AI flyer analysis | Get from: https://aistudio.google.com/app/apikey |
+| `AUTH0_DOMAIN` | Auth0 tenant domain | `your-tenant.auth0.com` |
+| `AUTH0_AUDIENCE` | Auth0 API identifier | `https://wasthere-api` |
+| `AUTH0_CLIENT_ID` | Auth0 application client ID | `abc123xyz456...` |
 
 ## Optional Secrets (with defaults)
 
@@ -61,6 +64,9 @@ VPS_USERNAME: ubuntu
 VPS_SSH_KEY: <your-private-key>
 POSTGRES_PASSWORD: <strong-password>
 GOOGLE_GEMINI_API_KEY: <your-api-key>
+AUTH0_DOMAIN: your-tenant.auth0.com
+AUTH0_AUDIENCE: https://wasthere-api
+AUTH0_CLIENT_ID: <your-auth0-client-id>
 ```
 
 ### Production Setup with Custom Domain
@@ -70,6 +76,9 @@ VPS_USERNAME: ubuntu
 VPS_SSH_KEY: <your-private-key>
 POSTGRES_PASSWORD: <strong-password>
 GOOGLE_GEMINI_API_KEY: <your-api-key>
+AUTH0_DOMAIN: your-tenant.auth0.com
+AUTH0_AUDIENCE: https://wasthere-api
+AUTH0_CLIENT_ID: <your-auth0-client-id>
 CORS_ORIGINS: http://yourdomain.com,https://yourdomain.com
 VITE_API_URL: https://api.yourdomain.com/api
 WEB_PORT: 443
@@ -95,8 +104,9 @@ After adding secrets, verify them:
 ## Next Steps
 
 After configuring secrets:
-1. Push code to `main` branch to trigger deployment
-2. Monitor deployment in **Actions** tab
-3. Verify application is running on VPS
+1. Configure Auth0 - see [Auth0 Setup Guide](../AUTH0-SETUP.md)
+2. Push code to `main` branch to trigger deployment
+3. Monitor deployment in **Actions** tab
+4. Verify application is running on VPS
 
 For detailed setup instructions, see [CICD-SETUP.md](CICD-SETUP.md)

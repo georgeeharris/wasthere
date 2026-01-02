@@ -10,12 +10,14 @@ A simple, clean web application for maintaining an archive of club events. Keep 
 - **Club Nights**: Create club night instances that combine events, venues, dates, and lineup of acts
 - **Flyer Management**: Upload and manage flyer images organized by event, venue, and date
 - **AI-Powered Auto-Population**: Automatically extract events, venues, acts, and club night dates from flyer images using Google Gemini AI
+- **Authentication**: Secure Auth0-based authentication with public timeline view and protected admin features
 
 ## Tech Stack
 
 - **Backend**: .NET 8.0 Web API with Entity Framework Core
 - **Frontend**: React with TypeScript (Vite)
 - **Database**: PostgreSQL (when containerized) or In-Memory (for development)
+- **Authentication**: Auth0 (OAuth 2.0 / OpenID Connect)
 - **Deployment**: Docker & Docker Compose
 - **CI/CD**: GitHub Actions for automated testing and deployment
 
@@ -79,6 +81,9 @@ cp .env.example .env
 
 Key configuration options:
 - `POSTGRES_PASSWORD`: Required - Set a strong database password
+- `AUTH0_DOMAIN`: Required - Your Auth0 tenant domain (see [Auth0 Setup Guide](AUTH0-SETUP.md))
+- `AUTH0_AUDIENCE`: Required - Your Auth0 API identifier (see [Auth0 Setup Guide](AUTH0-SETUP.md))
+- `AUTH0_CLIENT_ID`: Required - Your Auth0 application client ID (see [Auth0 Setup Guide](AUTH0-SETUP.md))
 - `CORS_ORIGINS`: Comma-separated list of allowed frontend origins (default: www.wasthere.co.uk)
   - For production with a domain: `CORS_ORIGINS=http://www.wasthere.co.uk,https://www.wasthere.co.uk`
   - For local development: `CORS_ORIGINS=http://localhost,http://localhost:5173,http://localhost:3000`
@@ -89,6 +94,8 @@ Key configuration options:
 - HTTPS/SSL: `WEB_HTTPS_PORT` (default: 443), see [HTTPS Setup Guide](HTTPS-SETUP.md) for full SSL configuration
 
 **Note**: After changing `.env`, restart the services with `docker compose restart`
+
+**Auth0 Setup**: See the [Auth0 Setup Guide](AUTH0-SETUP.md) for detailed instructions on configuring authentication.
 
 ### Option 2: Local Development
 

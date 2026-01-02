@@ -31,6 +31,7 @@ const Auth0ProviderWithHistory = ({ children }: Auth0ProviderWithHistoryProps) =
   }
 
   const onRedirectCallback = (appState?: { returnTo?: string }) => {
+    console.log('Auth0 redirect callback triggered', { appState });
     // Navigate to the returnTo route after successful login, or default to timeline
     navigate(appState?.returnTo || '/timeline');
   };

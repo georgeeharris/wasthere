@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import type { Flyer, DiagnosticInfo } from '../types';
-import { flyersApi, type AutoPopulateResult } from '../services/api';
+import type { Flyer, DiagnosticInfo, FlyerAnalysisResult } from '../types';
+import { flyersApi, type AutoPopulateResult, type YearSelection } from '../services/api';
 import { ErrorDiagnostics } from './ErrorDiagnostics';
+import { YearSelectionModal } from './YearSelectionModal';
 import { usePagination } from '../hooks/usePagination';
 import { Pagination } from './Pagination';
 
@@ -13,6 +14,8 @@ export function FlyerList() {
   const [diagnostics, setDiagnostics] = useState<DiagnosticInfo | undefined>(undefined);
   const [autoPopulating, setAutoPopulating] = useState<number | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showYearSelection, setShowYearSelection] = useState(false);
+  const [pendingAnalysis, setPendingAnalysis] = useState<{ flyerId: number; analysisResult: FlyerAnalysisResult } | null>(null);
 
   const {
     currentPage,
@@ -64,15 +67,23 @@ export function FlyerList() {
     try {
       const result = await flyersApi.upload(selectedFile);
       
-      if (result.success) {
-        // Show success message with details
-        const autoPopResult = result.autoPopulateResult;
-        if (autoPopResult) {
-          setSuccessMessage(
-            `Flyer uploaded and analyzed! ${autoPopResult.message}`
-          );
+      if (result.success && result.flyer && result.analysisResult) {
+        // Check if any club nights need year selection
+        const needsYearSelection = result.analysisResult.clubNights.some(
+          (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 1
+        );
+
+        if (needsYearSelection) {
+          // Show year selection modal
+          setPendingAnalysis({
+            flyerId: result.flyer.id,
+            analysisResult: result.analysisResult
+          });
+          setShowYearSelection(true);
+          setSuccessMessage('Flyer uploaded and analyzed! Please select years for the dates.');
         } else {
-          setSuccessMessage('Flyer uploaded successfully!');
+          // No year selection needed, complete upload automatically
+          await completeUploadWithYears(result.flyer.id, result.analysisResult);
         }
         
         // Reset form
@@ -81,12 +92,6 @@ export function FlyerList() {
         // Reset file input
         const fileInput = document.getElementById('flyer-file') as HTMLInputElement;
         if (fileInput) fileInput.value = '';
-        
-        // Reload flyers
-        await loadFlyers();
-        
-        // Clear success message after 10 seconds
-        setTimeout(() => setSuccessMessage(null), 10000);
       } else {
         setError(result.message || 'Failed to upload flyer');
         setDiagnostics(result.diagnostics);
@@ -99,6 +104,70 @@ export function FlyerList() {
     } finally {
       setUploading(false);
     }
+  };
+
+  const completeUploadWithYears = async (flyerId: number, analysisResult: FlyerAnalysisResult, selectedYearsMap?: Map<string, number>) => {
+    try {
+      // Build the year selections array
+      const selectedYears: YearSelection[] = [];
+      
+      for (const cn of analysisResult.clubNights) {
+        if (!cn.date && cn.month && cn.day) {
+          const key = `${cn.month}-${cn.day}`;
+          let year: number;
+          
+          if (selectedYearsMap && selectedYearsMap.has(key)) {
+            year = selectedYearsMap.get(key)!;
+          } else if (cn.candidateYears.length > 0) {
+            // Default to first candidate if not explicitly selected
+            year = cn.candidateYears[0];
+          } else {
+            continue; // Skip if no candidate years
+          }
+          
+          selectedYears.push({
+            month: cn.month,
+            day: cn.day,
+            year: year
+          });
+        }
+      }
+
+      const result = await flyersApi.completeUpload(flyerId, selectedYears);
+      
+      if (result.success) {
+        setSuccessMessage(`Flyer processed! ${result.message}`);
+        await loadFlyers();
+        setTimeout(() => setSuccessMessage(null), 10000);
+      } else {
+        setError(result.message || 'Failed to process flyer');
+        setDiagnostics(result.diagnostics);
+      }
+    } catch (error) {
+      console.error('Failed to complete upload:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to complete upload';
+      setError(errorMessage);
+    }
+  };
+
+  const handleYearSelectionConfirm = async (selectedYearsMap: Map<string, number>) => {
+    if (!pendingAnalysis) return;
+    
+    setShowYearSelection(false);
+    setUploading(true);
+    
+    try {
+      await completeUploadWithYears(pendingAnalysis.flyerId, pendingAnalysis.analysisResult, selectedYearsMap);
+    } finally {
+      setPendingAnalysis(null);
+      setUploading(false);
+    }
+  };
+
+  const handleYearSelectionCancel = () => {
+    setShowYearSelection(false);
+    setPendingAnalysis(null);
+    setError('Upload cancelled. Please delete the flyer if needed.');
   };
 
   const handleDelete = async (id: number) => {
@@ -153,6 +222,14 @@ export function FlyerList() {
             setError(null);
             setDiagnostics(undefined);
           }}
+        />
+      )}
+      
+      {showYearSelection && pendingAnalysis && (
+        <YearSelectionModal
+          clubNights={pendingAnalysis.analysisResult.clubNights}
+          onConfirm={handleYearSelectionConfirm}
+          onCancel={handleYearSelectionCancel}
         />
       )}
       

@@ -11,6 +11,16 @@ public interface IDateYearInferenceService
     /// <param name="dayOfWeek">Optional day of week (e.g., "Friday", "Monday")</param>
     /// <returns>The inferred year, or null if no valid year can be determined</returns>
     int? InferYear(int month, int day, string? dayOfWeek = null);
+
+    /// <summary>
+    /// Gets all candidate years for a date within the range 1995-2005,
+    /// plus the closest year before 1995 and after 2005.
+    /// </summary>
+    /// <param name="month">Month (1-12)</param>
+    /// <param name="day">Day of month (1-31)</param>
+    /// <param name="dayOfWeek">Optional day of week (e.g., "Friday", "Monday")</param>
+    /// <returns>List of candidate years, sorted chronologically</returns>
+    List<int> GetCandidateYears(int month, int day, string? dayOfWeek = null);
 }
 
 public class DateYearInferenceService : IDateYearInferenceService
@@ -22,6 +32,10 @@ public class DateYearInferenceService : IDateYearInferenceService
     // Extended search range
     private const int SearchStartYear = 1990;
     private const int SearchEndYear = 2025;
+    
+    // Year range for candidate generation (as per requirements: 1995-2005)
+    private const int CandidateStartYear = 1995;
+    private const int CandidateEndYear = 2005;
 
     public int? InferYear(int month, int day, string? dayOfWeek = null)
     {
@@ -82,6 +96,68 @@ public class DateYearInferenceService : IDateYearInferenceService
         }
 
         return null;
+    }
+
+    public List<int> GetCandidateYears(int month, int day, string? dayOfWeek = null)
+    {
+        // Validate input
+        if (month < 1 || month > 12 || day < 1 || day > 31)
+        {
+            return new List<int>();
+        }
+
+        DayOfWeek? targetDayOfWeek = null;
+        if (!string.IsNullOrWhiteSpace(dayOfWeek))
+        {
+            targetDayOfWeek = ParseDayOfWeek(dayOfWeek);
+        }
+
+        var candidatesInRange = new List<int>();
+        
+        // Find all matches in the 1995-2005 range
+        for (int year = CandidateStartYear; year <= CandidateEndYear; year++)
+        {
+            if (IsValidDate(year, month, day, targetDayOfWeek))
+            {
+                candidatesInRange.Add(year);
+            }
+        }
+        
+        // Find the closest match before 1995
+        int? closestBefore = null;
+        for (int year = CandidateStartYear - 1; year >= SearchStartYear; year--)
+        {
+            if (IsValidDate(year, month, day, targetDayOfWeek))
+            {
+                closestBefore = year;
+                break;
+            }
+        }
+        
+        // Find the closest match after 2005
+        int? closestAfter = null;
+        for (int year = CandidateEndYear + 1; year <= SearchEndYear; year++)
+        {
+            if (IsValidDate(year, month, day, targetDayOfWeek))
+            {
+                closestAfter = year;
+                break;
+            }
+        }
+        
+        // Combine all candidates and sort
+        var allCandidates = new List<int>();
+        if (closestBefore.HasValue)
+        {
+            allCandidates.Add(closestBefore.Value);
+        }
+        allCandidates.AddRange(candidatesInRange);
+        if (closestAfter.HasValue)
+        {
+            allCandidates.Add(closestAfter.Value);
+        }
+        
+        return allCandidates;
     }
 
     private bool IsValidDate(int year, int month, int day, DayOfWeek? targetDayOfWeek)

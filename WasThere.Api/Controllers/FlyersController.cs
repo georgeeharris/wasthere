@@ -119,6 +119,21 @@ public class FlyersController : ControllerBase
             });
         }
 
+        // Populate candidate years for each club night
+        foreach (var clubNightData in analysisResult.ClubNights)
+        {
+            // Only generate candidate years if full date is not present
+            if (!clubNightData.Date.HasValue && clubNightData.Month.HasValue && clubNightData.Day.HasValue)
+            {
+                var candidateYears = _yearInferenceService.GetCandidateYears(
+                    clubNightData.Month.Value,
+                    clubNightData.Day.Value,
+                    clubNightData.DayOfWeek
+                );
+                clubNightData.CandidateYears = candidateYears;
+            }
+        }
+
         // Use the first club night's data to determine event and venue
         var firstClubNight = analysisResult.ClubNights[0];
         
@@ -244,23 +259,62 @@ public class FlyersController : ControllerBase
         _context.Flyers.Add(flyer);
         await _context.SaveChangesAsync();
 
-        // Now process all club nights from the analysis
-        var autoPopulateResult = await ProcessAnalysisResult(flyer, analysisResult);
+        // Check if any club nights have candidate years that need selection
+        var needsYearSelection = analysisResult.ClubNights.Any(cn => cn.CandidateYears.Count > 0);
+        var message = needsYearSelection 
+            ? "Flyer uploaded and analyzed successfully. Please select years for the dates."
+            : "Flyer uploaded and analyzed successfully.";
 
-        // Return comprehensive response
+        // Return response with analysis result containing candidate years
+        // Do NOT create club nights yet - user needs to select years first if needed
         var response = new FlyerUploadResponse
         {
             Success = true,
-            Message = "Flyer uploaded and analyzed successfully",
+            Message = message,
             Flyer = await _context.Flyers
                 .Include(f => f.Event)
                 .Include(f => f.Venue)
                 .Include(f => f.ClubNights)
                 .FirstOrDefaultAsync(f => f.Id == flyer.Id),
-            AutoPopulateResult = autoPopulateResult
+            AnalysisResult = analysisResult
         };
 
         return CreatedAtAction(nameof(GetFlyer), new { id = flyer.Id }, response);
+    }
+
+    [HttpPost("{id}/complete-upload")]
+    public async Task<ActionResult<AutoPopulateResult>> CompleteUpload(int id, [FromBody] CompleteUploadRequest request)
+    {
+        var flyer = await _context.Flyers.FindAsync(id);
+        if (flyer == null)
+        {
+            return NotFound("Flyer not found");
+        }
+
+        // Get full path to the image
+        var imagePath = Path.Combine(_environment.ContentRootPath, flyer.FilePath);
+        if (!System.IO.File.Exists(imagePath))
+        {
+            return NotFound("Flyer image file not found");
+        }
+
+        // Re-analyze the flyer to get the club nights data
+        var analysisResult = await _geminiService.AnalyzeFlyerImageAsync(imagePath);
+        
+        if (!analysisResult.Success)
+        {
+            return BadRequest(new AutoPopulateResult
+            {
+                Success = false,
+                Message = analysisResult.ErrorMessage ?? "Failed to analyze flyer",
+                Diagnostics = analysisResult.Diagnostics
+            });
+        }
+
+        // Process club nights with the selected years
+        var result = await ProcessAnalysisResultWithSelectedYears(flyer, analysisResult, request.SelectedYears);
+        
+        return Ok(result);
     }
 
     [HttpDelete("{id}")]
@@ -635,6 +689,171 @@ public class FlyersController : ControllerBase
         return result;
     }
 
+    private async Task<AutoPopulateResult> ProcessAnalysisResultWithSelectedYears(Flyer flyer, FlyerAnalysisResult analysisResult, List<YearSelection> selectedYears)
+    {
+        var result = new AutoPopulateResult
+        {
+            Success = true,
+            Message = "Successfully processed flyer"
+        };
+
+        // Create a dictionary for quick lookup of selected years by month/day
+        var yearLookup = selectedYears.ToDictionary(
+            y => (y.Month, y.Day),
+            y => y.Year
+        );
+
+        // Process each club night from the analysis
+        foreach (var clubNightData in analysisResult.ClubNights)
+        {
+            try
+            {
+                // Find or create Event
+                var eventName = clubNightData.EventName?.Trim();
+                if (string.IsNullOrEmpty(eventName))
+                {
+                    _logger.LogWarning("Skipping club night with empty event name");
+                    continue;
+                }
+
+                var existingEvent = await _context.Events
+                    .FirstOrDefaultAsync(e => e.Name.ToLower() == eventName.ToLower());
+                
+                var eventEntity = existingEvent ?? new Event { Name = eventName };
+                if (existingEvent == null)
+                {
+                    _context.Events.Add(eventEntity);
+                    await _context.SaveChangesAsync();
+                    result.EventsCreated++;
+                }
+
+                // Find or create Venue
+                var venueName = clubNightData.VenueName?.Trim();
+                Venue? venueEntity = null;
+                
+                if (!string.IsNullOrEmpty(venueName))
+                {
+                    var existingVenue = await _context.Venues
+                        .FirstOrDefaultAsync(v => v.Name.ToLower() == venueName.ToLower());
+                    
+                    venueEntity = existingVenue ?? new Venue { Name = venueName };
+                    if (existingVenue == null)
+                    {
+                        _context.Venues.Add(venueEntity);
+                        await _context.SaveChangesAsync();
+                        result.VenuesCreated++;
+                    }
+                }
+                else
+                {
+                    // Use venue from flyer if not in analysis
+                    venueEntity = await _context.Venues.FindAsync(flyer.VenueId);
+                }
+
+                if (venueEntity == null)
+                {
+                    _logger.LogWarning("No venue found for club night");
+                    continue;
+                }
+
+                // Create ClubNight using selected year or inferred date
+                DateTime? dateToUse = null;
+                
+                if (clubNightData.Date.HasValue)
+                {
+                    // Full date already provided
+                    dateToUse = clubNightData.Date.Value;
+                }
+                else if (clubNightData.Month.HasValue && clubNightData.Day.HasValue)
+                {
+                    // Check if user selected a year for this date
+                    if (yearLookup.TryGetValue((clubNightData.Month.Value, clubNightData.Day.Value), out var selectedYear))
+                    {
+                        try
+                        {
+                            dateToUse = new DateTime(selectedYear, clubNightData.Month.Value, clubNightData.Day.Value, 0, 0, 0, DateTimeKind.Utc);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "Failed to create date from selected year {Year}, month {Month}, day {Day}",
+                                selectedYear, clubNightData.Month.Value, clubNightData.Day.Value);
+                        }
+                    }
+                    else
+                    {
+                        // Fall back to inference if no year was selected
+                        dateToUse = InferDate(clubNightData);
+                    }
+                }
+
+                if (dateToUse.HasValue)
+                {
+                    var clubNight = new ClubNight
+                    {
+                        Date = DateTime.SpecifyKind(dateToUse.Value, DateTimeKind.Utc),
+                        EventId = eventEntity.Id,
+                        VenueId = venueEntity.Id,
+                        FlyerId = flyer.Id
+                    };
+
+                    _context.ClubNights.Add(clubNight);
+                    await _context.SaveChangesAsync();
+                    result.ClubNightsCreated++;
+
+                    // Add acts
+                    if (clubNightData.Acts != null)
+                    {
+                        foreach (var actData in clubNightData.Acts)
+                        {
+                            if (actData == null)
+                            {
+                                continue;
+                            }
+                            
+                            var trimmedActName = actData.Name?.Trim();
+                            if (string.IsNullOrEmpty(trimmedActName))
+                            {
+                                continue;
+                            }
+
+                            // Find or create Act
+                            var existingAct = await _context.Acts
+                                .FirstOrDefaultAsync(a => a.Name.ToLower() == trimmedActName.ToLower());
+                            
+                            var actEntity = existingAct ?? new Act { Name = trimmedActName };
+                            if (existingAct == null)
+                            {
+                                _context.Acts.Add(actEntity);
+                                await _context.SaveChangesAsync();
+                                result.ActsCreated++;
+                            }
+
+                            // Link act to club night
+                            var clubNightAct = new ClubNightAct
+                            {
+                                ClubNightId = clubNight.Id,
+                                ActId = actEntity.Id,
+                                IsLiveSet = actData.IsLiveSet
+                            };
+                            _context.ClubNightActs.Add(clubNightAct);
+                        }
+                    }
+
+                    await _context.SaveChangesAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error processing club night data");
+                result.Errors.Add($"Error processing club night: {ex.Message}");
+            }
+        }
+
+        result.Message = $"Created {result.ClubNightsCreated} club nights, {result.EventsCreated} events, {result.VenuesCreated} venues, {result.ActsCreated} acts";
+        
+        return result;
+    }
+
     private static string SanitizeFileName(string fileName)
     {
         // Remove invalid characters and replace spaces with underscores
@@ -674,6 +893,18 @@ public class FlyersController : ControllerBase
     }
 }
 
+public class CompleteUploadRequest
+{
+    public List<YearSelection> SelectedYears { get; set; } = new();
+}
+
+public class YearSelection
+{
+    public int Month { get; set; }
+    public int Day { get; set; }
+    public int Year { get; set; }
+}
+
 public class AutoPopulateResult
 {
     public bool Success { get; set; }
@@ -693,4 +924,5 @@ public class FlyerUploadResponse
     public Flyer? Flyer { get; set; }
     public AutoPopulateResult? AutoPopulateResult { get; set; }
     public DiagnosticInfo? Diagnostics { get; set; }
+    public FlyerAnalysisResult? AnalysisResult { get; set; }
 }

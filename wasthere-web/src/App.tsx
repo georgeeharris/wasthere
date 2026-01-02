@@ -5,6 +5,7 @@ import { VenueList } from './components/VenueList';
 import { ActList } from './components/ActList';
 import { ClubNightList } from './components/ClubNightList';
 import { FlyerList } from './components/FlyerList';
+import { Timeline } from './components/Timeline';
 
 function App() {
   const location = useLocation();
@@ -12,10 +13,11 @@ function App() {
 
   // Determine active tab from current path
   const getActiveTab = () => {
+    if (location.pathname === '/timeline') return 'timeline';
     if (location.pathname === '/nights') return 'nights';
     if (location.pathname === '/flyers') return 'flyers';
     if (location.pathname === '/master') return 'master';
-    return 'nights'; // default
+    return 'timeline'; // default
   };
 
   const activeTab = getActiveTab();
@@ -25,6 +27,12 @@ function App() {
       <header className="app-header">
         <h1>WasThere - Club Events Archive</h1>
         <nav className="tabs">
+          <button
+            className={`tab ${activeTab === 'timeline' ? 'active' : ''}`}
+            onClick={() => navigate('/timeline')}
+          >
+            Timeline
+          </button>
           <button
             className={`tab ${activeTab === 'nights' ? 'active' : ''}`}
             onClick={() => navigate('/nights')}
@@ -48,6 +56,7 @@ function App() {
 
       <main className="app-main">
         <Routes>
+          <Route path="/timeline" element={<Timeline />} />
           <Route path="/nights" element={<ClubNightList />} />
           <Route path="/flyers" element={<FlyerList />} />
           <Route path="/master" element={
@@ -57,7 +66,7 @@ function App() {
               <ActList />
             </div>
           } />
-          <Route path="/" element={<Navigate to="/nights" replace />} />
+          <Route path="/" element={<Navigate to="/timeline" replace />} />
         </Routes>
       </main>
     </div>

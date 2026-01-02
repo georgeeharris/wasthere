@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { ClubNight, Event } from '../types';
-import { clubNightsApi, eventsApi } from '../services/api';
+import { clubNightsApi, eventsApi, flyersApi } from '../services/api';
 
 export function Timeline() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -189,9 +189,20 @@ export function Timeline() {
                     ) : (
                       item.clubNights.map((clubNight) => (
                         <div key={clubNight.id} className="timeline-card">
-                          <div className="timeline-card-date">{formatDate(clubNight.date)}</div>
-                          <div className="timeline-card-venue">{clubNight.venueName}</div>
-                          <div className="timeline-card-acts">{formatActs(clubNight.acts)}</div>
+                          {clubNight.flyerThumbnailPath && (
+                            <div className="timeline-card-thumbnail">
+                              <img
+                                src={flyersApi.getImageUrl(clubNight.flyerThumbnailPath)}
+                                alt="Flyer thumbnail"
+                                className="timeline-thumbnail-image"
+                              />
+                            </div>
+                          )}
+                          <div className="timeline-card-content">
+                            <div className="timeline-card-date">{formatDate(clubNight.date)}</div>
+                            <div className="timeline-card-venue">{clubNight.venueName}</div>
+                            <div className="timeline-card-acts">{formatActs(clubNight.acts)}</div>
+                          </div>
                         </div>
                       ))
                     )}

@@ -26,6 +26,8 @@ export interface ClubNight {
   eventName: string;
   venueId: number;
   venueName: string;
+  flyerId?: number | null;
+  flyerThumbnailPath?: string | null;
   acts: ClubNightAct[];
 }
 
@@ -44,6 +46,7 @@ export interface ClubNightDto {
 export interface Flyer {
   id: number;
   filePath: string;
+  thumbnailPath?: string | null;
   fileName: string;
   uploadedAt: string;
   eventId: number;

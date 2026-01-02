@@ -3,6 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using WasThere.Api.Data;
 using WasThere.Api.Models;
 using WasThere.Api.Services;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
 
 namespace WasThere.Api.Controllers;
 
@@ -206,13 +208,30 @@ public class FlyersController : ControllerBase
             return StatusCode(500, "Error organizing uploaded file.");
         }
 
-        // Create relative path for storage in database
+        // Generate thumbnail
+        var thumbnailFileName = $"thumb_{uniqueFileName}";
+        var thumbnailFilePath = Path.Combine(finalUploadsPath, thumbnailFileName);
+        try
+        {
+            GenerateThumbnail(finalFilePath, thumbnailFilePath, 300, 400);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating thumbnail");
+            // Continue even if thumbnail generation fails
+        }
+
+        // Create relative paths for storage in database
         var relativePath = Path.Combine(UploadsFolder, sanitizedEventName, sanitizedVenueName, dateFolder, uniqueFileName);
+        var thumbnailRelativePath = System.IO.File.Exists(thumbnailFilePath) 
+            ? Path.Combine(UploadsFolder, sanitizedEventName, sanitizedVenueName, dateFolder, thumbnailFileName)
+            : null;
 
         // Create Flyer entity
         var flyer = new Flyer
         {
             FilePath = relativePath,
+            ThumbnailPath = thumbnailRelativePath,
             FileName = file.FileName,
             UploadedAt = DateTime.UtcNow,
             EventId = eventEntity.Id,
@@ -263,6 +282,23 @@ public class FlyersController : ControllerBase
             {
                 _logger.LogError(ex, "Error deleting file from disk");
                 // Continue with database deletion even if file deletion fails
+            }
+        }
+
+        // Delete the thumbnail file
+        if (!string.IsNullOrEmpty(flyer.ThumbnailPath))
+        {
+            var thumbnailPath = Path.Combine(_environment.ContentRootPath, flyer.ThumbnailPath);
+            if (System.IO.File.Exists(thumbnailPath))
+            {
+                try
+                {
+                    System.IO.File.Delete(thumbnailPath);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error deleting thumbnail from disk");
+                }
             }
         }
 
@@ -605,6 +641,39 @@ public class FlyersController : ControllerBase
             .Where(ch => !invalidChars.Contains(ch))
             .ToArray());
         return sanitized.Replace(" ", "_");
+    }
+
+    private void GenerateThumbnail(string sourcePath, string thumbnailPath, int width, int height)
+    {
+        using var image = Image.Load(sourcePath);
+        
+        // Calculate aspect ratio
+        var aspectRatio = (float)image.Width / image.Height;
+        var targetAspectRatio = (float)width / height;
+        
+        int resizeWidth, resizeHeight;
+        
+        if (aspectRatio > targetAspectRatio)
+        {
+            // Image is wider than target, fit by height
+            resizeHeight = height;
+            resizeWidth = (int)(height * aspectRatio);
+        }
+        else
+        {
+            // Image is taller than target, fit by width
+            resizeWidth = width;
+            resizeHeight = (int)(width / aspectRatio);
+        }
+        
+        image.Mutate(x => x
+            .Resize(new ResizeOptions
+            {
+                Size = new Size(resizeWidth, resizeHeight),
+                Mode = ResizeMode.Max
+            }));
+        
+        image.Save(thumbnailPath);
     }
 }
 

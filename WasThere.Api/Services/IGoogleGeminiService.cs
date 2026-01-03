@@ -13,6 +13,12 @@ public class FlyerAnalysisResult
     public string? ErrorMessage { get; set; }
     public List<ClubNightData> ClubNights { get; set; } = new();
     public DiagnosticInfo Diagnostics { get; set; } = new();
+    
+    // For logging purposes
+    public string? GeminiPrompt { get; set; }
+    public string? GeminiRawResponse { get; set; }
+    public long ImageSizeBytes { get; set; }
+    public string? ImageMimeType { get; set; }
 }
 
 public class ClubNightData

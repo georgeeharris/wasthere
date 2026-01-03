@@ -363,7 +363,11 @@ Please analyze the flyer and return the JSON:";
             {
                 Success = true,
                 ClubNights = analysisData.ClubNights,
-                Diagnostics = diagnostics
+                Diagnostics = diagnostics,
+                GeminiPrompt = prompt,
+                GeminiRawResponse = textResponse,
+                ImageSizeBytes = imageBytes.Length,
+                ImageMimeType = mimeType
             };
         }
         catch (Exception ex)

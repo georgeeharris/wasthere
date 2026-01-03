@@ -8,7 +8,6 @@ namespace WasThere.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
 public class EventsController : ControllerBase
 {
     private readonly ClubEventContext _context;

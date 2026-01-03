@@ -11,7 +11,6 @@ namespace WasThere.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
 public class FlyersController : ControllerBase
 {
     private readonly ClubEventContext _context;

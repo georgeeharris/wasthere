@@ -18,6 +18,7 @@ public class FlyersController : ControllerBase
     private readonly ILogger<FlyersController> _logger;
     private readonly IGoogleGeminiService _geminiService;
     private readonly IDateYearInferenceService _yearInferenceService;
+    private readonly IFlyerConversionLogger _conversionLogger;
     private const long MaxFileSize = 10 * 1024 * 1024; // 10MB
     private const string UploadsFolder = "uploads";
     private const int ThumbnailWidth = 300;
@@ -29,13 +30,15 @@ public class FlyersController : ControllerBase
         IWebHostEnvironment environment,
         ILogger<FlyersController> logger,
         IGoogleGeminiService geminiService,
-        IDateYearInferenceService yearInferenceService)
+        IDateYearInferenceService yearInferenceService,
+        IFlyerConversionLogger conversionLogger)
     {
         _context = context;
         _environment = environment;
         _logger = logger;
         _geminiService = geminiService;
         _yearInferenceService = yearInferenceService;
+        _conversionLogger = conversionLogger;
     }
 
     [HttpGet]
@@ -92,6 +95,9 @@ public class FlyersController : ControllerBase
         var uniqueFileName = $"{Guid.NewGuid()}{extension}";
         var tempFilePath = Path.Combine(uploadsPath, uniqueFileName);
 
+        // Start conversion log
+        var logId = _conversionLogger.StartConversionLog(tempFilePath, file.FileName);
+
         try
         {
             using (var stream = new FileStream(tempFilePath, FileMode.Create))
@@ -102,15 +108,35 @@ public class FlyersController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error saving file to disk");
+            _conversionLogger.LogError(logId, "Error saving file to disk", ex);
+            _conversionLogger.CompleteConversionLog(logId, false, "Failed to save uploaded file");
             return StatusCode(500, "Error saving file to disk.");
         }
 
         // Analyze the flyer immediately
         var analysisResult = await _geminiService.AnalyzeFlyerImageAsync(tempFilePath);
         
+        // Log Gemini request and response
+        if (!string.IsNullOrEmpty(analysisResult.GeminiPrompt))
+        {
+            _conversionLogger.LogGeminiRequest(logId, analysisResult.GeminiPrompt, tempFilePath, 
+                analysisResult.ImageSizeBytes, analysisResult.ImageMimeType ?? "unknown");
+        }
+        
+        if (!string.IsNullOrEmpty(analysisResult.GeminiRawResponse))
+        {
+            _conversionLogger.LogGeminiResponse(logId, analysisResult.GeminiRawResponse, 
+                analysisResult.Success, analysisResult.ErrorMessage);
+        }
+        
+        // Log analysis result
+        _conversionLogger.LogAnalysisResult(logId, analysisResult);
+        
         if (!analysisResult.Success || analysisResult.ClubNights.Count == 0)
         {
             // If analysis failed, clean up and return error
+            _conversionLogger.CompleteConversionLog(logId, false, 
+                analysisResult.ErrorMessage ?? "Failed to analyze flyer");
             try { System.IO.File.Delete(tempFilePath); } catch { }
             return BadRequest(new FlyerUploadResponse
             {
@@ -259,12 +285,19 @@ public class FlyersController : ControllerBase
 
         _context.Flyers.Add(flyer);
         await _context.SaveChangesAsync();
+        
+        // Log flyer creation
+        _conversionLogger.LogDatabaseOperation(logId, "CREATE", "Flyer", file.FileName, flyer.Id);
 
         // Check if any club nights have candidate years that need selection
         var needsYearSelection = analysisResult.ClubNights.Any(cn => cn.CandidateYears.Count > 0);
         var message = needsYearSelection 
             ? "Flyer uploaded and analyzed successfully. Please select years for the dates."
             : "Flyer uploaded and analyzed successfully.";
+        
+        // Complete the log (upload phase)
+        _conversionLogger.CompleteConversionLog(logId, true, 
+            $"Upload complete. {(needsYearSelection ? "Awaiting year selection." : "Ready for processing.")}");
 
         // Return response with analysis result containing candidate years
         // Do NOT create club nights yet - user needs to select years first if needed
@@ -299,11 +332,31 @@ public class FlyersController : ControllerBase
             return NotFound("Flyer image file not found");
         }
 
+        // Start conversion log for completing the upload
+        var logId = _conversionLogger.StartConversionLog(imagePath, flyer.FileName);
+
         // Re-analyze the flyer to get the club nights data
         var analysisResult = await _geminiService.AnalyzeFlyerImageAsync(imagePath);
         
+        // Log Gemini request and response
+        if (!string.IsNullOrEmpty(analysisResult.GeminiPrompt))
+        {
+            _conversionLogger.LogGeminiRequest(logId, analysisResult.GeminiPrompt, imagePath, 
+                analysisResult.ImageSizeBytes, analysisResult.ImageMimeType ?? "unknown");
+        }
+        
+        if (!string.IsNullOrEmpty(analysisResult.GeminiRawResponse))
+        {
+            _conversionLogger.LogGeminiResponse(logId, analysisResult.GeminiRawResponse, 
+                analysisResult.Success, analysisResult.ErrorMessage);
+        }
+        
+        _conversionLogger.LogAnalysisResult(logId, analysisResult);
+        
         if (!analysisResult.Success)
         {
+            _conversionLogger.CompleteConversionLog(logId, false, 
+                analysisResult.ErrorMessage ?? "Failed to analyze flyer");
             return BadRequest(new AutoPopulateResult
             {
                 Success = false,
@@ -312,8 +365,11 @@ public class FlyersController : ControllerBase
             });
         }
 
+        // Log user year selections
+        _conversionLogger.LogUserYearSelection(logId, request.SelectedYears);
+
         // Process club nights with the selected years
-        var result = await ProcessAnalysisResultWithSelectedYears(flyer, analysisResult, request.SelectedYears);
+        var result = await ProcessAnalysisResultWithSelectedYears(flyer, analysisResult, request.SelectedYears, logId);
         
         return Ok(result);
     }
@@ -690,7 +746,7 @@ public class FlyersController : ControllerBase
         return result;
     }
 
-    private async Task<AutoPopulateResult> ProcessAnalysisResultWithSelectedYears(Flyer flyer, FlyerAnalysisResult analysisResult, List<YearSelection> selectedYears)
+    private async Task<AutoPopulateResult> ProcessAnalysisResultWithSelectedYears(Flyer flyer, FlyerAnalysisResult analysisResult, List<YearSelection> selectedYears, string logId)
     {
         var result = new AutoPopulateResult
         {
@@ -726,6 +782,7 @@ public class FlyersController : ControllerBase
                     _context.Events.Add(eventEntity);
                     await _context.SaveChangesAsync();
                     result.EventsCreated++;
+                    _conversionLogger.LogDatabaseOperation(logId, "CREATE", "Event", eventName, eventEntity.Id);
                 }
 
                 // Find or create Venue
@@ -743,6 +800,7 @@ public class FlyersController : ControllerBase
                         _context.Venues.Add(venueEntity);
                         await _context.SaveChangesAsync();
                         result.VenuesCreated++;
+                        _conversionLogger.LogDatabaseOperation(logId, "CREATE", "Venue", venueName, venueEntity.Id);
                     }
                 }
                 else
@@ -800,6 +858,8 @@ public class FlyersController : ControllerBase
                     _context.ClubNights.Add(clubNight);
                     await _context.SaveChangesAsync();
                     result.ClubNightsCreated++;
+                    _conversionLogger.LogDatabaseOperation(logId, "CREATE", "ClubNight", 
+                        $"{eventName} at {venueEntity.Name} on {dateToUse.Value:yyyy-MM-dd}", clubNight.Id);
 
                     // Add acts
                     if (clubNightData.Acts != null)
@@ -828,6 +888,7 @@ public class FlyersController : ControllerBase
                                 await _context.SaveChangesAsync();
                                 result.ActsCreated++;
                             }
+                                _conversionLogger.LogDatabaseOperation(logId, "CREATE", "Act", trimmedActName, actEntity.Id);
 
                             // Link act to club night
                             var clubNightAct = new ClubNightAct
@@ -846,11 +907,16 @@ public class FlyersController : ControllerBase
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error processing club night data");
+                _conversionLogger.LogError(logId, "Error processing club night data", ex);
                 result.Errors.Add($"Error processing club night: {ex.Message}");
             }
         }
 
         result.Message = $"Created {result.ClubNightsCreated} club nights, {result.EventsCreated} events, {result.VenuesCreated} venues, {result.ActsCreated} acts";
+        
+        // Complete the conversion log
+        _conversionLogger.CompleteConversionLog(logId, result.Success, result.Message, 
+            result.EventsCreated, result.VenuesCreated, result.ActsCreated, result.ClubNightsCreated);
         
         return result;
     }
@@ -897,13 +963,6 @@ public class FlyersController : ControllerBase
 public class CompleteUploadRequest
 {
     public List<YearSelection> SelectedYears { get; set; } = new();
-}
-
-public class YearSelection
-{
-    public int Month { get; set; }
-    public int Day { get; set; }
-    public int Year { get; set; }
 }
 
 public class AutoPopulateResult

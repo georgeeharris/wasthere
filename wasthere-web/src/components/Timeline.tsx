@@ -173,40 +173,33 @@ export function Timeline() {
                   </div>
                 )}
                 
-                <div className="timeline-row">
-                  <div className="timeline-date-label">
-                    <span className="month-name">{getMonthName(item.month)}</span>
-                  </div>
-                  
-                  <div className="timeline-line-container">
-                    <div className="timeline-line"></div>
-                    <div className="timeline-dot"></div>
-                  </div>
-                  
-                  <div className="timeline-events">
-                    {item.clubNights.length === 0 ? (
-                      <div className="timeline-empty">No events this month</div>
-                    ) : (
-                      item.clubNights.map((clubNight) => (
-                        <div key={clubNight.id} className="timeline-card">
-                          {clubNight.flyerThumbnailPath && (
-                            <div className="timeline-card-thumbnail">
-                              <img
-                                src={flyersApi.getImageUrl(clubNight.flyerThumbnailPath)}
-                                alt="Flyer thumbnail"
-                                className="timeline-thumbnail-image"
-                              />
-                            </div>
-                          )}
-                          <div className="timeline-card-content">
-                            <div className="timeline-card-date">{formatDate(clubNight.date)}</div>
-                            <div className="timeline-card-venue">{clubNight.venueName}</div>
-                            <div className="timeline-card-acts">{formatActs(clubNight.acts)}</div>
+                <div className="timeline-month-marker">
+                  <h4>{getMonthName(item.month)}</h4>
+                </div>
+                
+                <div className="timeline-events">
+                  {item.clubNights.length === 0 ? (
+                    <div className="timeline-empty">No events this month</div>
+                  ) : (
+                    item.clubNights.map((clubNight) => (
+                      <div key={clubNight.id} className="timeline-card">
+                        {clubNight.flyerThumbnailPath && (
+                          <div className="timeline-card-thumbnail">
+                            <img
+                              src={flyersApi.getImageUrl(clubNight.flyerThumbnailPath)}
+                              alt="Flyer thumbnail"
+                              className="timeline-thumbnail-image"
+                            />
                           </div>
+                        )}
+                        <div className="timeline-card-content">
+                          <div className="timeline-card-date">{formatDate(clubNight.date)}</div>
+                          <div className="timeline-card-venue">{clubNight.venueName}</div>
+                          <div className="timeline-card-acts">{formatActs(clubNight.acts)}</div>
                         </div>
-                      ))
-                    )}
-                  </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             );

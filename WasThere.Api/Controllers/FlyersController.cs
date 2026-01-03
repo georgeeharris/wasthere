@@ -887,8 +887,8 @@ public class FlyersController : ControllerBase
                                 _context.Acts.Add(actEntity);
                                 await _context.SaveChangesAsync();
                                 result.ActsCreated++;
-                            }
                                 _conversionLogger.LogDatabaseOperation(logId, "CREATE", "Act", trimmedActName, actEntity.Id);
+                            }
 
                             // Link act to club night
                             var clubNightAct = new ClubNightAct

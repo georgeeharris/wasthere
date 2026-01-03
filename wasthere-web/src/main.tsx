@@ -19,9 +19,11 @@ console.log('Has code param:', new URLSearchParams(window.location.search).has('
 console.log('Has state param:', new URLSearchParams(window.location.search).has('state'));
 
 createRoot(document.getElementById('root')!).render(
-  <BrowserRouter>
-    <Auth0ProviderWithHistory>
-      <App />
-    </Auth0ProviderWithHistory>
-  </BrowserRouter>
+  <StrictMode>
+    <BrowserRouter>
+      <Auth0ProviderWithHistory>
+        <App />
+      </Auth0ProviderWithHistory>
+    </BrowserRouter>
+  </StrictMode>
 )

@@ -8,7 +8,6 @@ import { ActList } from './components/ActList';
 import { ClubNightList } from './components/ClubNightList';
 import { FlyerList } from './components/FlyerList';
 import { Timeline } from './components/Timeline';
-import ProtectedRoute from './auth/ProtectedRoute';
 import { setAccessTokenProvider } from './services/api';
 
 function App() {

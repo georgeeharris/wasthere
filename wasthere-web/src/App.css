@@ -138,53 +138,17 @@
   margin-bottom: 2rem;
 }
 
-.timeline-row {
-  display: grid;
-  grid-template-columns: 150px 80px 1fr;
-  gap: 1rem;
-  align-items: start;
+.timeline-month-marker {
+  margin-bottom: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #e0e0e0;
 }
 
-.timeline-date-label {
-  text-align: right;
-  padding-top: 0.5rem;
-}
-
-.month-name {
-  font-size: 1.1rem;
-  font-weight: 600;
+.timeline-month-marker h4 {
+  font-size: 1.3rem;
   color: #333;
-}
-
-.timeline-line-container {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 0.5rem;
-}
-
-.timeline-line {
-  width: 3px;
-  background: linear-gradient(to bottom, #646cff 0%, #535bf2 100%);
-  min-height: 100%;
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-}
-
-.timeline-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #646cff;
-  border: 3px solid white;
-  box-shadow: 0 0 0 2px #646cff;
-  position: relative;
-  z-index: 1;
-  flex-shrink: 0;
+  margin: 0;
+  font-weight: 600;
 }
 
 .timeline-events {
@@ -213,19 +177,8 @@
   align-items: flex-start;
 }
 
-.timeline-card::before {
-  content: '';
-  position: absolute;
-  left: -11px;
-  top: 1rem;
-  width: 10px;
-  height: 2px;
-  background: #646cff;
-}
-
 .timeline-card:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  transform: translateX(4px);
 }
 
 .timeline-card-thumbnail {
@@ -284,30 +237,8 @@
     grid-template-columns: 1fr;
   }
 
-  .timeline-row {
-    grid-template-columns: 100px 60px 1fr;
-    gap: 0.75rem;
-  }
-
-  .timeline-date-label {
-    font-size: 0.9rem;
-  }
-
-  .month-name {
-    font-size: 1rem;
-  }
-
-  .timeline-card {
-    padding: 0.875rem 1rem;
-  }
-
-  .timeline-card::before {
-    left: -8px;
-  }
-
-  .timeline-card-thumbnail {
-    width: 60px;
-    height: 80px;
+  .timeline-month-marker h4 {
+    font-size: 1.1rem;
   }
 }
 

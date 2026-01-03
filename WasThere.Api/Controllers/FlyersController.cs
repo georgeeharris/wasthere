@@ -19,7 +19,7 @@ public class FlyersController : ControllerBase
     private readonly IGoogleGeminiService _geminiService;
     private readonly IDateYearInferenceService _yearInferenceService;
     private readonly IFlyerConversionLogger _conversionLogger;
-    private const long MaxFileSize = 10 * 1024 * 1024; // 10MB
+    private const long MaxFileSize = 20 * 1024 * 1024; // 20MB
     private const string UploadsFolder = "uploads";
     private const int ThumbnailWidth = 300;
     private const int ThumbnailHeight = 400;

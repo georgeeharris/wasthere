@@ -5,9 +5,11 @@ import { eventsApi } from '../services/api';
 interface EventSelectionModalProps {
   onConfirm: (eventId: number) => void;
   onCancel: () => void;
+  currentFlyerIndex?: number;
+  totalFlyers?: number;
 }
 
-export function EventSelectionModal({ onConfirm, onCancel }: EventSelectionModalProps) {
+export function EventSelectionModal({ onConfirm, onCancel, currentFlyerIndex, totalFlyers }: EventSelectionModalProps) {
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,7 +89,14 @@ export function EventSelectionModal({ onConfirm, onCancel }: EventSelectionModal
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h3>Select Event</h3>
+        <h3>
+          Select Event
+          {totalFlyers && totalFlyers > 1 && currentFlyerIndex !== undefined && (
+            <span style={{ marginLeft: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
+              (Flyer {currentFlyerIndex + 1} of {totalFlyers})
+            </span>
+          )}
+        </h3>
         <p style={{ marginBottom: '1rem', color: '#666' }}>
           The event name could not be determined from the flyer. 
           Please select the event from the list below.

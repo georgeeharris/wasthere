@@ -5,9 +5,11 @@ interface YearSelectionModalProps {
   clubNights: ClubNightData[];
   onConfirm: (selectedYears: Map<string, number>) => void;
   onCancel: () => void;
+  currentFlyerIndex?: number;
+  totalFlyers?: number;
 }
 
-export function YearSelectionModal({ clubNights, onConfirm, onCancel }: YearSelectionModalProps) {
+export function YearSelectionModal({ clubNights, onConfirm, onCancel, currentFlyerIndex, totalFlyers }: YearSelectionModalProps) {
   // Initialize with first candidate year for each date
   const initialSelections = new Map<string, number>();
   clubNights.forEach((cn) => {
@@ -51,7 +53,14 @@ export function YearSelectionModal({ clubNights, onConfirm, onCancel }: YearSele
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-        <h3>Select Years for Dates</h3>
+        <h3>
+          Select Years for Dates
+          {totalFlyers && totalFlyers > 1 && currentFlyerIndex !== undefined && (
+            <span style={{ marginLeft: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
+              (Flyer {currentFlyerIndex + 1} of {totalFlyers})
+            </span>
+          )}
+        </h3>
         <p style={{ marginBottom: '1rem', color: '#666' }}>
           Multiple possible years were found for the dates on this flyer. 
           Please select the correct year for each date.

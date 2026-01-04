@@ -19,6 +19,9 @@ export function FlyerList() {
   const [showYearSelection, setShowYearSelection] = useState(false);
   const [pendingAnalysis, setPendingAnalysis] = useState<{ flyerId: number; analysisResult: FlyerAnalysisResult; needsEventSelection: boolean } | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [currentFlyerIndex, setCurrentFlyerIndex] = useState<number>(0);
+  const [flyerEventSelections, setFlyerEventSelections] = useState<Map<number, number>>(new Map());
+  const [flyerYearSelections, setFlyerYearSelections] = useState<Map<number, Map<string, number>>>(new Map());
 
   // Filter and sort state
   const [showFilters, setShowFilters] = useState(false);
@@ -111,11 +114,18 @@ export function FlyerList() {
       if (result.success && result.flyer && result.analysisResult) {
         const needsEventSelection = result.needsEventSelection || false;
         
-        // Check if any club nights need year selection
-        const needsYearSelection = result.analysisResult.clubNights.some(
-          (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 1
-        );
-
+        // Ensure flyers array exists (backward compatibility)
+        if (!result.analysisResult.flyers || result.analysisResult.flyers.length === 0) {
+          // If old format, convert to new format
+          if (result.analysisResult.clubNights && result.analysisResult.clubNights.length > 0) {
+            result.analysisResult.flyers = [{ clubNights: result.analysisResult.clubNights }];
+          } else {
+            setError('No flyer data found in analysis');
+            setUploading(false);
+            return;
+          }
+        }
+        
         // Store pending analysis for wizard flow
         setPendingAnalysis({
           flyerId: result.flyer.id,
@@ -123,15 +133,48 @@ export function FlyerList() {
           needsEventSelection: needsEventSelection
         });
 
-        // Start wizard flow: event selection first (if needed), then year selection (if needed)
-        if (needsEventSelection) {
+        // Initialize wizard state
+        setCurrentFlyerIndex(0);
+        setFlyerEventSelections(new Map());
+        setFlyerYearSelections(new Map());
+
+        const totalFlyers = result.analysisResult.flyers?.length || 1;
+        const firstFlyer = result.analysisResult.flyers?.[0];
+        
+        if (!firstFlyer || firstFlyer.clubNights.length === 0) {
+          setError('No flyer data found in analysis');
+          setUploading(false);
+          return;
+        }
+
+        // Check if first flyer needs event selection
+        const firstEventName = firstFlyer.clubNights[0]?.eventName;
+        const firstNeedsEventSelection = !firstEventName;
+        
+        // Check if first flyer needs year selection
+        const firstNeedsYearSelection = firstFlyer.clubNights.some(
+          (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 1
+        );
+
+        // Build appropriate message
+        let message = 'Flyer uploaded and analyzed!';
+        if (totalFlyers > 1) {
+          message += ` Found ${totalFlyers} flyers in the image.`;
+        }
+
+        // Start wizard flow for the first flyer
+        if (firstNeedsEventSelection) {
           setShowEventSelection(true);
-          setSuccessMessage('Flyer uploaded and analyzed! Please select the event.');
-        } else if (needsYearSelection) {
+          setSuccessMessage(message + ' Please select the event.');
+        } else if (firstNeedsYearSelection) {
           setShowYearSelection(true);
-          setSuccessMessage('Flyer uploaded and analyzed! Please select years for the dates.');
+          setSuccessMessage(message + ' Please select years for the dates.');
+        } else if (totalFlyers > 1) {
+          // First flyer doesn't need input but there are more flyers
+          // Process next flyer or complete if all are done
+          processNextFlyer(result.flyer.id, result.analysisResult, 0, new Map(), new Map());
         } else {
-          // No user input needed, complete upload automatically
+          // Single flyer, no user input needed
           await completeUploadWithYears(result.flyer.id, result.analysisResult);
         }
         
@@ -199,60 +242,189 @@ export function FlyerList() {
     }
   };
 
+  const processNextFlyer = (
+    flyerId: number,
+    analysisResult: FlyerAnalysisResult,
+    completedIndex: number,
+    eventSelections: Map<number, number>,
+    yearSelections: Map<number, Map<string, number>>
+  ) => {
+    const totalFlyers = analysisResult.flyers?.length || 1;
+    const nextIndex = completedIndex + 1;
+
+    if (nextIndex >= totalFlyers) {
+      // All flyers processed, complete the upload
+      setUploading(true);
+      
+      // Merge all year selections from all flyers into one map
+      const mergedYearSelections = new Map<string, number>();
+      yearSelections.forEach((flyerSelections) => {
+        flyerSelections.forEach((year, key) => {
+          mergedYearSelections.set(key, year);
+        });
+      });
+      
+      // NOTE: Current limitation - we use the first event selection for all club nights
+      // because the Flyer database model only supports one EventId per image upload.
+      // If multiple different events are detected in one image, users should upload them separately.
+      const firstEventId = eventSelections.size > 0 ? Array.from(eventSelections.values())[0] : undefined;
+      
+      completeUploadWithYears(flyerId, analysisResult, mergedYearSelections, firstEventId)
+        .finally(() => {
+          setPendingAnalysis(null);
+          setCurrentFlyerIndex(0);
+          setFlyerEventSelections(new Map());
+          setFlyerYearSelections(new Map());
+          setUploading(false);
+        });
+      return;
+    }
+
+    // Process next flyer
+    setCurrentFlyerIndex(nextIndex);
+    const nextFlyer = analysisResult.flyers[nextIndex];
+    
+    if (!nextFlyer || nextFlyer.clubNights.length === 0) {
+      // Skip this flyer and move to next
+      processNextFlyer(flyerId, analysisResult, nextIndex, eventSelections, yearSelections);
+      return;
+    }
+
+    // Check if next flyer needs event selection
+    const nextEventName = nextFlyer.clubNights[0]?.eventName;
+    const nextNeedsEventSelection = !nextEventName;
+    
+    // Check if next flyer needs year selection
+    const nextNeedsYearSelection = nextFlyer.clubNights.some(
+      (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 1
+    );
+
+    if (nextNeedsEventSelection) {
+      setShowEventSelection(true);
+      setSuccessMessage(`Processing flyer ${nextIndex + 1} of ${totalFlyers}. Please select the event.`);
+    } else if (nextNeedsYearSelection) {
+      setShowYearSelection(true);
+      setSuccessMessage(`Processing flyer ${nextIndex + 1} of ${totalFlyers}. Please select years for the dates.`);
+    } else {
+      // No input needed for this flyer, move to next
+      processNextFlyer(flyerId, analysisResult, nextIndex, eventSelections, yearSelections);
+    }
+  };
+
   const handleEventSelectionConfirm = (eventId: number) => {
     if (!pendingAnalysis) return;
     
-    // Store the selected event ID
-    setSelectedEventId(eventId);
+    const totalFlyers = pendingAnalysis.analysisResult.flyers?.length || 1;
+    const currentFlyer = pendingAnalysis.analysisResult.flyers?.[currentFlyerIndex];
+    
+    if (!currentFlyer) return;
+
+    // Store the selected event ID for this flyer
+    const newEventSelections = new Map(flyerEventSelections);
+    newEventSelections.set(currentFlyerIndex, eventId);
+    setFlyerEventSelections(newEventSelections);
     setShowEventSelection(false);
     
-    // Check if year selection is also needed
-    const needsYearSelection = pendingAnalysis.analysisResult.clubNights.some(
+    // Check if current flyer needs year selection
+    const needsYearSelection = currentFlyer.clubNights.some(
       (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 1
     );
     
     if (needsYearSelection) {
-      // Proceed to year selection
+      // Proceed to year selection for current flyer
       setShowYearSelection(true);
-      setSuccessMessage('Event selected! Now please select years for the dates.');
+      if (totalFlyers > 1) {
+        setSuccessMessage(`Event selected for flyer ${currentFlyerIndex + 1} of ${totalFlyers}! Now please select years for the dates.`);
+      } else {
+        setSuccessMessage('Event selected! Now please select years for the dates.');
+      }
     } else {
-      // No year selection needed, complete upload with selected event
-      setUploading(true);
-      completeUploadWithYears(pendingAnalysis.flyerId, pendingAnalysis.analysisResult, undefined, eventId)
-        .finally(() => {
-          setPendingAnalysis(null);
-          setSelectedEventId(null);
-          setUploading(false);
-        });
+      // No year selection needed for this flyer, move to next or complete
+      if (totalFlyers > 1) {
+        processNextFlyer(pendingAnalysis.flyerId, pendingAnalysis.analysisResult, currentFlyerIndex, newEventSelections, flyerYearSelections);
+      } else {
+        setUploading(true);
+        completeUploadWithYears(pendingAnalysis.flyerId, pendingAnalysis.analysisResult, undefined, eventId)
+          .finally(() => {
+            setPendingAnalysis(null);
+            setCurrentFlyerIndex(0);
+            setFlyerEventSelections(new Map());
+            setFlyerYearSelections(new Map());
+            setUploading(false);
+          });
+      }
     }
   };
 
   const handleEventSelectionCancel = () => {
     setShowEventSelection(false);
     setPendingAnalysis(null);
-    setSelectedEventId(null);
+    setCurrentFlyerIndex(0);
+    setFlyerEventSelections(new Map());
+    setFlyerYearSelections(new Map());
     setError('Upload cancelled. Please delete the flyer if needed.');
   };
 
   const handleYearSelectionConfirm = async (selectedYearsMap: Map<string, number>) => {
     if (!pendingAnalysis) return;
     
-    setShowYearSelection(false);
-    setUploading(true);
+    const totalFlyers = pendingAnalysis.analysisResult.flyers?.length || 1;
     
-    try {
-      await completeUploadWithYears(pendingAnalysis.flyerId, pendingAnalysis.analysisResult, selectedYearsMap, selectedEventId || undefined);
-    } finally {
-      setPendingAnalysis(null);
-      setSelectedEventId(null);
-      setUploading(false);
+    // Store the year selections for this flyer
+    const newYearSelections = new Map(flyerYearSelections);
+    newYearSelections.set(currentFlyerIndex, selectedYearsMap);
+    setFlyerYearSelections(newYearSelections);
+    setShowYearSelection(false);
+    
+    // If there are more flyers to process, continue the wizard
+    if (totalFlyers > 1 && currentFlyerIndex < totalFlyers - 1) {
+      processNextFlyer(
+        pendingAnalysis.flyerId, 
+        pendingAnalysis.analysisResult, 
+        currentFlyerIndex, 
+        flyerEventSelections, 
+        newYearSelections
+      );
+    } else {
+      // All flyers processed or single flyer, complete upload
+      setUploading(true);
+      
+      // Merge all year selections from all flyers
+      const mergedYearSelections = new Map<string, number>();
+      newYearSelections.forEach((flyerSelections) => {
+        flyerSelections.forEach((year, key) => {
+          mergedYearSelections.set(key, year);
+        });
+      });
+      
+      // NOTE: Current limitation - we use the first event selection for all club nights
+      // because the Flyer database model only supports one EventId per image upload.
+      // If multiple different events are detected in one image, users should upload them separately.
+      const firstEventId = flyerEventSelections.size > 0 ? Array.from(flyerEventSelections.values())[0] : undefined;
+      
+      try {
+        await completeUploadWithYears(
+          pendingAnalysis.flyerId, 
+          pendingAnalysis.analysisResult, 
+          mergedYearSelections, 
+          firstEventId || undefined
+        );
+      } finally {
+        setPendingAnalysis(null);
+        setCurrentFlyerIndex(0);
+        setFlyerEventSelections(new Map());
+        setFlyerYearSelections(new Map());
+        setUploading(false);
+      }
     }
   };
 
   const handleYearSelectionCancel = () => {
     setShowYearSelection(false);
     setPendingAnalysis(null);
-    setSelectedEventId(null);
+    setCurrentFlyerIndex(0);
+    setFlyerEventSelections(new Map());
+    setFlyerYearSelections(new Map());
     setError('Upload cancelled. Please delete the flyer if needed.');
   };
 
@@ -311,18 +483,22 @@ export function FlyerList() {
         />
       )}
       
-      {showEventSelection && (
+      {showEventSelection && pendingAnalysis && (
         <EventSelectionModal
           onConfirm={handleEventSelectionConfirm}
           onCancel={handleEventSelectionCancel}
+          currentFlyerIndex={currentFlyerIndex}
+          totalFlyers={pendingAnalysis.analysisResult.flyers?.length || 1}
         />
       )}
       
       {showYearSelection && pendingAnalysis && (
         <YearSelectionModal
-          clubNights={pendingAnalysis.analysisResult.clubNights}
+          clubNights={pendingAnalysis.analysisResult.flyers?.[currentFlyerIndex]?.clubNights || pendingAnalysis.analysisResult.clubNights}
           onConfirm={handleYearSelectionConfirm}
           onCancel={handleYearSelectionCancel}
+          currentFlyerIndex={currentFlyerIndex}
+          totalFlyers={pendingAnalysis.analysisResult.flyers?.length || 1}
         />
       )}
       

@@ -260,12 +260,19 @@ export function FlyerList() {
           <div className="form-actions">
             <button 
               type="submit" 
-              className="btn btn-primary"
+              className={`btn btn-primary ${uploading ? 'btn-loading' : ''}`}
               disabled={uploading || !selectedFile}
             >
-              {uploading ? 'Uploading and Analyzing...' : 'Upload and Analyze Flyer'}
+              {uploading && <span className="spinner"></span>}
+              Upload and Analyze Flyer
             </button>
           </div>
+          
+          {uploading && (
+            <div className="progress-text">
+              Uploading and analyzing flyer... This may take a minute.
+            </div>
+          )}
           
           <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
             <p>The flyer will be automatically analyzed to extract:</p>

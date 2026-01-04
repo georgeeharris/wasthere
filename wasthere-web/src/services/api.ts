@@ -187,7 +187,7 @@ export const flyersApi = {
     return response.json();
   },
   
-  upload: async (file: File): Promise<FlyerUploadResponse> => {
+  upload: async (file: File): Promise<MultiFlyerUploadResponse> => {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -295,6 +295,23 @@ export interface FlyerUploadResponse {
   diagnostics?: DiagnosticInfo;
   analysisResult?: FlyerAnalysisResult;
   needsEventSelection?: boolean;
+}
+
+export interface FlyerUploadResult {
+  success: boolean;
+  message: string;
+  flyer?: Flyer;
+  diagnostics?: DiagnosticInfo;
+  analysisResult?: FlyerAnalysisResult;
+  needsEventSelection?: boolean;
+  flyerIndex: number;
+}
+
+export interface MultiFlyerUploadResponse {
+  success: boolean;
+  message: string;
+  totalFlyers: number;
+  flyerResults: FlyerUploadResult[];
 }
 
 export interface YearSelection {

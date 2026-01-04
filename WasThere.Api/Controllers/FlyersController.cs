@@ -19,6 +19,7 @@ public class FlyersController : ControllerBase
     private readonly IGoogleGeminiService _geminiService;
     private readonly IDateYearInferenceService _yearInferenceService;
     private readonly IFlyerConversionLogger _conversionLogger;
+    private readonly IImageSplitterService _imageSplitterService;
     private const long MaxFileSize = 20 * 1024 * 1024; // 20MB
     private const string UploadsFolder = "uploads";
     private const int ThumbnailWidth = 300;
@@ -34,7 +35,8 @@ public class FlyersController : ControllerBase
         ILogger<FlyersController> logger,
         IGoogleGeminiService geminiService,
         IDateYearInferenceService yearInferenceService,
-        IFlyerConversionLogger conversionLogger)
+        IFlyerConversionLogger conversionLogger,
+        IImageSplitterService imageSplitterService)
     {
         _context = context;
         _environment = environment;
@@ -42,6 +44,7 @@ public class FlyersController : ControllerBase
         _geminiService = geminiService;
         _yearInferenceService = yearInferenceService;
         _conversionLogger = conversionLogger;
+        _imageSplitterService = imageSplitterService;
     }
 
     [HttpGet]
@@ -72,7 +75,7 @@ public class FlyersController : ControllerBase
     }
 
     [HttpPost("upload")]
-    public async Task<ActionResult<FlyerUploadResponse>> UploadFlyer([FromForm] IFormFile file)
+    public async Task<ActionResult<MultiFlyerUploadResponse>> UploadFlyer([FromForm] IFormFile file)
     {
         // Validate file
         if (file == null || file.Length == 0)
@@ -116,238 +119,367 @@ public class FlyersController : ControllerBase
             return StatusCode(500, "Error saving file to disk.");
         }
 
-        // Analyze the flyer immediately
-        var analysisResult = await _geminiService.AnalyzeFlyerImageAsync(tempFilePath);
+        // NEW: Detect if image contains multiple flyers
+        _logger.LogInformation("Detecting flyer bounding boxes in uploaded image");
+        var boundingBoxResult = await _imageSplitterService.DetectFlyerBoundingBoxesAsync(tempFilePath);
         
-        // Log Gemini request and response
-        if (!string.IsNullOrEmpty(analysisResult.GeminiPrompt))
+        if (!boundingBoxResult.Success)
         {
-            _conversionLogger.LogGeminiRequest(logId, analysisResult.GeminiPrompt, tempFilePath, 
-                analysisResult.ImageSizeBytes, analysisResult.ImageMimeType ?? "unknown");
-        }
-        
-        if (!string.IsNullOrEmpty(analysisResult.GeminiRawResponse))
-        {
-            _conversionLogger.LogGeminiResponse(logId, analysisResult.GeminiRawResponse, 
-                analysisResult.Success, analysisResult.ErrorMessage);
-        }
-        
-        // Log analysis result
-        _conversionLogger.LogAnalysisResult(logId, analysisResult);
-        
-        if (!analysisResult.Success || analysisResult.ClubNights.Count == 0)
-        {
-            // If analysis failed, clean up and return error
-            _conversionLogger.CompleteConversionLog(logId, false, 
-                analysisResult.ErrorMessage ?? "Failed to analyze flyer");
-            try { System.IO.File.Delete(tempFilePath); } catch { }
-            return BadRequest(new FlyerUploadResponse
+            _logger.LogWarning("Failed to detect bounding boxes, proceeding with single flyer assumption");
+            // Fall back to treating as single flyer
+            boundingBoxResult.BoundingBoxes = new List<BoundingBox>
             {
-                Success = false,
-                Message = analysisResult.ErrorMessage ?? "Failed to analyze flyer. Could not extract event information.",
-                Diagnostics = analysisResult.Diagnostics
-            });
+                new BoundingBox { Index = 0, X = 0, Y = 0, Width = 1, Height = 1 }
+            };
         }
 
-        // Populate candidate years for each club night
-        foreach (var clubNightData in analysisResult.ClubNights)
+        var flyerCount = boundingBoxResult.FlyerCount;
+        _logger.LogInformation("Detected {FlyerCount} flyer(s) in the uploaded image", flyerCount);
+        _conversionLogger.LogDatabaseOperation(logId, "DETECT", "Flyers", $"Detected {flyerCount} flyer(s)", 0);
+
+        List<FlyerUploadResult> flyerResults = new();
+
+        // If multiple flyers detected, split the image
+        List<string> imagePaths;
+        if (flyerCount > 1)
         {
-            // Only generate candidate years if full date is not present
-            if (!clubNightData.Date.HasValue && clubNightData.Month.HasValue && clubNightData.Day.HasValue)
+            _logger.LogInformation("Splitting image into {Count} individual flyers", flyerCount);
+            try
             {
-                var candidateYears = _yearInferenceService.GetCandidateYears(
-                    clubNightData.Month.Value,
-                    clubNightData.Day.Value,
-                    clubNightData.DayOfWeek
+                var splitDir = Path.Combine(uploadsPath, $"split_{Guid.NewGuid()}");
+                imagePaths = await _imageSplitterService.SplitImageIntoFlyersAsync(
+                    tempFilePath, 
+                    boundingBoxResult.BoundingBoxes, 
+                    splitDir
                 );
-                clubNightData.CandidateYears = candidateYears;
+                _conversionLogger.LogDatabaseOperation(logId, "SPLIT", "Image", $"Split into {imagePaths.Count} files", 0);
             }
-        }
-
-        // Use the first club night's data to determine event and venue
-        var firstClubNight = analysisResult.ClubNights[0];
-        
-        // Check if event name was detected
-        var eventName = firstClubNight.EventName?.Trim();
-        var needsEventSelection = string.IsNullOrEmpty(eventName);
-        
-        // Create a placeholder event if event name is missing
-        Event eventEntity;
-        if (needsEventSelection)
-        {
-            // Use a placeholder event name that will be replaced when user selects an event
-            eventName = PlaceholderEventName;
-            var existingPlaceholder = await _context.Events
-                .FirstOrDefaultAsync(e => e.Name == eventName);
-            eventEntity = existingPlaceholder ?? new Event { Name = eventName };
-            if (existingPlaceholder == null)
+            catch (Exception ex)
             {
-                _context.Events.Add(eventEntity);
-                await _context.SaveChangesAsync();
+                _logger.LogError(ex, "Error splitting image");
+                _conversionLogger.LogError(logId, "Error splitting image", ex);
+                _conversionLogger.CompleteConversionLog(logId, false, "Failed to split image");
+                try { System.IO.File.Delete(tempFilePath); } catch { }
+                return StatusCode(500, "Error splitting image into individual flyers.");
             }
         }
         else
         {
-            // Find or create Event with the detected name
-            // eventName is guaranteed to be non-null here because needsEventSelection is false
-            var existingEvent = await _context.Events
-                .FirstOrDefaultAsync(e => e.Name.ToLower() == eventName!.ToLower());
-            eventEntity = existingEvent ?? new Event { Name = eventName! };
-            if (existingEvent == null)
-            {
-                _context.Events.Add(eventEntity);
-                await _context.SaveChangesAsync();
-            }
+            // Single flyer, use original temp file
+            imagePaths = new List<string> { tempFilePath };
         }
 
-        // Find or create Venue
-        var venueName = firstClubNight.VenueName?.Trim();
-        Venue? venueEntity = null;
-        
-        // Check if venue name is uncertain or missing
-        if (IsUncertainVenueName(venueName))
+        // Process each flyer image separately
+        for (int i = 0; i < imagePaths.Count; i++)
         {
-            // Use placeholder venue if name is uncertain or missing
-            venueName = PlaceholderVenueName;
-            var existingVenue = await _context.Venues
-                .FirstOrDefaultAsync(v => v.Name == venueName);
-            venueEntity = existingVenue ?? new Venue { Name = venueName };
-            if (existingVenue == null)
+            var flyerImagePath = imagePaths[i];
+            var flyerLogId = i == 0 ? logId : _conversionLogger.StartConversionLog(flyerImagePath, $"{file.FileName} (Flyer {i + 1})");
+            
+            _logger.LogInformation("Processing flyer {Index} of {Total}", i + 1, imagePaths.Count);
+            
+            try
             {
-                _context.Venues.Add(venueEntity);
-                await _context.SaveChangesAsync();
+                var result = await ProcessSingleFlyerAsync(
+                    flyerImagePath,
+                    file.FileName,
+                    extension,
+                    flyerLogId,
+                    i + 1,
+                    imagePaths.Count
+                );
+                
+                flyerResults.Add(result);
             }
-        }
-        else
-        {
-            // Use detected venue name
-            var existingVenue = await _context.Venues
-                .FirstOrDefaultAsync(v => v.Name.ToLower() == venueName!.ToLower());
-            venueEntity = existingVenue ?? new Venue { Name = venueName! };
-            if (existingVenue == null)
+            catch (Exception ex)
             {
-                _context.Venues.Add(venueEntity);
-                await _context.SaveChangesAsync();
-            }
-        }
-
-        // Determine earliest date from analysis results
-        DateTime? earliestDate = null;
-        foreach (var clubNightData in analysisResult.ClubNights)
-        {
-            var inferredDate = InferDate(clubNightData);
-            if (inferredDate.HasValue)
-            {
-                if (!earliestDate.HasValue || inferredDate.Value < earliestDate.Value)
+                _logger.LogError(ex, "Error processing flyer {Index}", i + 1);
+                _conversionLogger.LogError(flyerLogId, $"Error processing flyer {i + 1}", ex);
+                flyerResults.Add(new FlyerUploadResult
                 {
-                    earliestDate = inferredDate.Value;
+                    Success = false,
+                    Message = $"Failed to process flyer {i + 1}: {ex.Message}",
+                    FlyerIndex = i + 1
+                });
+            }
+        }
+
+        // Clean up split files and temp file
+        try
+        {
+            foreach (var path in imagePaths)
+            {
+                if (System.IO.File.Exists(path))
+                {
+                    System.IO.File.Delete(path);
+                }
+            }
+            
+            // Clean up split directory if it was created
+            if (flyerCount > 1 && imagePaths.Count > 0)
+            {
+                var splitDir = Path.GetDirectoryName(imagePaths[0]);
+                if (!string.IsNullOrEmpty(splitDir) && Directory.Exists(splitDir))
+                {
+                    Directory.Delete(splitDir, true);
                 }
             }
         }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Error cleaning up temporary files");
+        }
 
-        // If no valid date found, use a default date in the middle of our target range
-        var finalDate = earliestDate ?? new DateTime(2002, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        // Build response
+        var successfulFlyers = flyerResults.Count(r => r.Success);
+        var response = new MultiFlyerUploadResponse
+        {
+            Success = successfulFlyers > 0,
+            Message = successfulFlyers == flyerResults.Count
+                ? $"Successfully processed all {flyerResults.Count} flyer(s)"
+                : $"Processed {successfulFlyers} of {flyerResults.Count} flyer(s) successfully",
+            TotalFlyers = flyerResults.Count,
+            FlyerResults = flyerResults
+        };
 
-        // Sanitize names for use in file paths
-        var sanitizedEventName = SanitizeFileName(eventEntity.Name);
-        var sanitizedVenueName = SanitizeFileName(venueEntity.Name);
-        var dateFolder = finalDate.ToString("yyyy-MM-dd");
+        return Ok(response);
+    }
 
-        // Move file to proper location: uploads/{event}/{venue}/{date}/
-        var finalUploadsPath = Path.Combine(_environment.ContentRootPath, UploadsFolder, sanitizedEventName, sanitizedVenueName, dateFolder);
-        Directory.CreateDirectory(finalUploadsPath);
-        
-        var finalFilePath = Path.Combine(finalUploadsPath, uniqueFileName);
+    private async Task<FlyerUploadResult> ProcessSingleFlyerAsync(
+        string imagePath,
+        string originalFileName,
+        string extension,
+        string logId,
+        int flyerIndex,
+        int totalFlyers)
+    {
         try
         {
-            System.IO.File.Move(tempFilePath, finalFilePath);
+            // Analyze the flyer
+            var analysisResult = await _geminiService.AnalyzeFlyerImageAsync(imagePath);
+            
+            // Log Gemini request and response
+            if (!string.IsNullOrEmpty(analysisResult.GeminiPrompt))
+            {
+                _conversionLogger.LogGeminiRequest(logId, analysisResult.GeminiPrompt, imagePath, 
+                    analysisResult.ImageSizeBytes, analysisResult.ImageMimeType ?? "unknown");
+            }
+            
+            if (!string.IsNullOrEmpty(analysisResult.GeminiRawResponse))
+            {
+                _conversionLogger.LogGeminiResponse(logId, analysisResult.GeminiRawResponse, 
+                    analysisResult.Success, analysisResult.ErrorMessage);
+            }
+            
+            // Log analysis result
+            _conversionLogger.LogAnalysisResult(logId, analysisResult);
+            
+            if (!analysisResult.Success || analysisResult.ClubNights.Count == 0)
+            {
+                _conversionLogger.CompleteConversionLog(logId, false, 
+                    analysisResult.ErrorMessage ?? "Failed to analyze flyer");
+                return new FlyerUploadResult
+                {
+                    Success = false,
+                    Message = analysisResult.ErrorMessage ?? "Failed to analyze flyer. Could not extract event information.",
+                    Diagnostics = analysisResult.Diagnostics,
+                    FlyerIndex = flyerIndex
+                };
+            }
+
+            // Populate candidate years for each club night
+            foreach (var clubNightData in analysisResult.ClubNights)
+            {
+                if (!clubNightData.Date.HasValue && clubNightData.Month.HasValue && clubNightData.Day.HasValue)
+                {
+                    var candidateYears = _yearInferenceService.GetCandidateYears(
+                        clubNightData.Month.Value,
+                        clubNightData.Day.Value,
+                        clubNightData.DayOfWeek
+                    );
+                    clubNightData.CandidateYears = candidateYears;
+                }
+            }
+
+            // Use the first club night's data to determine event and venue
+            var firstClubNight = analysisResult.ClubNights[0];
+            
+            // Check if event name was detected
+            var eventName = firstClubNight.EventName?.Trim();
+            var needsEventSelection = string.IsNullOrEmpty(eventName);
+            
+            // Create a placeholder event if event name is missing
+            Event eventEntity;
+            if (needsEventSelection)
+            {
+                eventName = PlaceholderEventName;
+                var existingPlaceholder = await _context.Events
+                    .FirstOrDefaultAsync(e => e.Name == eventName);
+                eventEntity = existingPlaceholder ?? new Event { Name = eventName };
+                if (existingPlaceholder == null)
+                {
+                    _context.Events.Add(eventEntity);
+                    await _context.SaveChangesAsync();
+                }
+            }
+            else
+            {
+                var existingEvent = await _context.Events
+                    .FirstOrDefaultAsync(e => e.Name.ToLower() == eventName!.ToLower());
+                eventEntity = existingEvent ?? new Event { Name = eventName! };
+                if (existingEvent == null)
+                {
+                    _context.Events.Add(eventEntity);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            // Find or create Venue
+            var venueName = firstClubNight.VenueName?.Trim();
+            Venue? venueEntity = null;
+            
+            if (IsUncertainVenueName(venueName))
+            {
+                venueName = PlaceholderVenueName;
+                var existingVenue = await _context.Venues
+                    .FirstOrDefaultAsync(v => v.Name == venueName);
+                venueEntity = existingVenue ?? new Venue { Name = venueName };
+                if (existingVenue == null)
+                {
+                    _context.Venues.Add(venueEntity);
+                    await _context.SaveChangesAsync();
+                }
+            }
+            else
+            {
+                var existingVenue = await _context.Venues
+                    .FirstOrDefaultAsync(v => v.Name.ToLower() == venueName!.ToLower());
+                venueEntity = existingVenue ?? new Venue { Name = venueName! };
+                if (existingVenue == null)
+                {
+                    _context.Venues.Add(venueEntity);
+                    await _context.SaveChangesAsync();
+                }
+            }
+
+            // Determine earliest date
+            DateTime? earliestDate = null;
+            foreach (var clubNightData in analysisResult.ClubNights)
+            {
+                var inferredDate = InferDate(clubNightData);
+                if (inferredDate.HasValue)
+                {
+                    if (!earliestDate.HasValue || inferredDate.Value < earliestDate.Value)
+                    {
+                        earliestDate = inferredDate.Value;
+                    }
+                }
+            }
+
+            var finalDate = earliestDate ?? new DateTime(2002, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            // Sanitize names for file paths
+            var sanitizedEventName = SanitizeFileName(eventEntity.Name);
+            var sanitizedVenueName = SanitizeFileName(venueEntity.Name);
+            var dateFolder = finalDate.ToString("yyyy-MM-dd");
+
+            // Move file to proper location
+            var finalUploadsPath = Path.Combine(_environment.ContentRootPath, UploadsFolder, sanitizedEventName, sanitizedVenueName, dateFolder);
+            Directory.CreateDirectory(finalUploadsPath);
+            
+            var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+            var finalFilePath = Path.Combine(finalUploadsPath, uniqueFileName);
+            System.IO.File.Copy(imagePath, finalFilePath);
+
+            // Generate thumbnail
+            var thumbnailFileName = $"thumb_{uniqueFileName}";
+            var thumbnailFilePath = Path.Combine(finalUploadsPath, thumbnailFileName);
+            try
+            {
+                GenerateThumbnail(finalFilePath, thumbnailFilePath, ThumbnailWidth, ThumbnailHeight);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error generating thumbnail");
+            }
+
+            // Create relative paths
+            var relativePath = Path.Combine(UploadsFolder, sanitizedEventName, sanitizedVenueName, dateFolder, uniqueFileName);
+            var thumbnailRelativePath = System.IO.File.Exists(thumbnailFilePath) 
+                ? Path.Combine(UploadsFolder, sanitizedEventName, sanitizedVenueName, dateFolder, thumbnailFileName)
+                : null;
+
+            // Create Flyer entity
+            var displayName = totalFlyers > 1 ? $"{originalFileName} (Flyer {flyerIndex})" : originalFileName;
+            var flyer = new Flyer
+            {
+                FilePath = relativePath,
+                ThumbnailPath = thumbnailRelativePath,
+                FileName = displayName,
+                UploadedAt = DateTime.UtcNow,
+                EventId = eventEntity.Id,
+                VenueId = venueEntity.Id,
+                EarliestClubNightDate = finalDate
+            };
+
+            _context.Flyers.Add(flyer);
+            await _context.SaveChangesAsync();
+            
+            _conversionLogger.LogDatabaseOperation(logId, "CREATE", "Flyer", displayName, flyer.Id);
+
+            // Check if needs year selection
+            var needsYearSelection = analysisResult.ClubNights.Any(cn => cn.CandidateYears.Count > 0);
+            
+            // Build message
+            string message;
+            if (needsEventSelection && needsYearSelection)
+            {
+                message = "Flyer analyzed. Please select the event and years for the dates.";
+            }
+            else if (needsEventSelection)
+            {
+                message = "Flyer analyzed. Please select the event.";
+            }
+            else if (needsYearSelection)
+            {
+                message = "Flyer analyzed. Please select years for the dates.";
+            }
+            else
+            {
+                message = "Flyer analyzed successfully.";
+            }
+            
+            if (totalFlyers > 1)
+            {
+                message = $"Flyer {flyerIndex} of {totalFlyers}: " + message;
+            }
+            
+            _conversionLogger.CompleteConversionLog(logId, true, 
+                $"Upload complete. {(needsEventSelection || needsYearSelection ? "Awaiting user input." : "Ready for processing.")}");
+
+            return new FlyerUploadResult
+            {
+                Success = true,
+                NeedsEventSelection = needsEventSelection,
+                Message = message,
+                Flyer = await _context.Flyers
+                    .Include(f => f.Event)
+                    .Include(f => f.Venue)
+                    .Include(f => f.ClubNights)
+                    .FirstOrDefaultAsync(f => f.Id == flyer.Id),
+                AnalysisResult = analysisResult,
+                FlyerIndex = flyerIndex
+            };
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error moving file to final location");
-            try { System.IO.File.Delete(tempFilePath); } catch { }
-            return StatusCode(500, "Error organizing uploaded file.");
+            _logger.LogError(ex, "Error in ProcessSingleFlyerAsync");
+            return new FlyerUploadResult
+            {
+                Success = false,
+                Message = $"Error processing flyer: {ex.Message}",
+                FlyerIndex = flyerIndex
+            };
         }
-
-        // Generate thumbnail
-        var thumbnailFileName = $"thumb_{uniqueFileName}";
-        var thumbnailFilePath = Path.Combine(finalUploadsPath, thumbnailFileName);
-        try
-        {
-            GenerateThumbnail(finalFilePath, thumbnailFilePath, ThumbnailWidth, ThumbnailHeight);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error generating thumbnail");
-            // Continue even if thumbnail generation fails
-        }
-
-        // Create relative paths for storage in database
-        var relativePath = Path.Combine(UploadsFolder, sanitizedEventName, sanitizedVenueName, dateFolder, uniqueFileName);
-        var thumbnailRelativePath = System.IO.File.Exists(thumbnailFilePath) 
-            ? Path.Combine(UploadsFolder, sanitizedEventName, sanitizedVenueName, dateFolder, thumbnailFileName)
-            : null;
-
-        // Create Flyer entity
-        var flyer = new Flyer
-        {
-            FilePath = relativePath,
-            ThumbnailPath = thumbnailRelativePath,
-            FileName = file.FileName,
-            UploadedAt = DateTime.UtcNow,
-            EventId = eventEntity.Id,
-            VenueId = venueEntity.Id,
-            EarliestClubNightDate = finalDate
-        };
-
-        _context.Flyers.Add(flyer);
-        await _context.SaveChangesAsync();
-        
-        // Log flyer creation
-        _conversionLogger.LogDatabaseOperation(logId, "CREATE", "Flyer", file.FileName, flyer.Id);
-
-        // Check if any club nights have candidate years that need selection
-        var needsYearSelection = analysisResult.ClubNights.Any(cn => cn.CandidateYears.Count > 0);
-        
-        // Build the message based on what user input is needed
-        string message;
-        if (needsEventSelection && needsYearSelection)
-        {
-            message = "Flyer uploaded and analyzed successfully. Please select the event and years for the dates.";
-        }
-        else if (needsEventSelection)
-        {
-            message = "Flyer uploaded and analyzed successfully. Please select the event.";
-        }
-        else if (needsYearSelection)
-        {
-            message = "Flyer uploaded and analyzed successfully. Please select years for the dates.";
-        }
-        else
-        {
-            message = "Flyer uploaded and analyzed successfully.";
-        }
-        
-        // Complete the log (upload phase)
-        _conversionLogger.CompleteConversionLog(logId, true, 
-            $"Upload complete. {(needsEventSelection || needsYearSelection ? "Awaiting user input." : "Ready for processing.")}");
-
-        // Return response with analysis result containing candidate years
-        // Do NOT create club nights yet - user needs to select event/years first if needed
-        var response = new FlyerUploadResponse
-        {
-            Success = true,
-            NeedsEventSelection = needsEventSelection,
-            Message = message,
-            Flyer = await _context.Flyers
-                .Include(f => f.Event)
-                .Include(f => f.Venue)
-                .Include(f => f.ClubNights)
-                .FirstOrDefaultAsync(f => f.Id == flyer.Id),
-            AnalysisResult = analysisResult
-        };
-
-        return CreatedAtAction(nameof(GetFlyer), new { id = flyer.Id }, response);
     }
 
     [HttpPost("{id}/complete-upload")]
@@ -1083,4 +1215,23 @@ public class FlyerUploadResponse
     public DiagnosticInfo? Diagnostics { get; set; }
     public FlyerAnalysisResult? AnalysisResult { get; set; }
     public bool NeedsEventSelection { get; set; }
+}
+
+public class FlyerUploadResult
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public Flyer? Flyer { get; set; }
+    public DiagnosticInfo? Diagnostics { get; set; }
+    public FlyerAnalysisResult? AnalysisResult { get; set; }
+    public bool NeedsEventSelection { get; set; }
+    public int FlyerIndex { get; set; }
+}
+
+public class MultiFlyerUploadResponse
+{
+    public bool Success { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public int TotalFlyers { get; set; }
+    public List<FlyerUploadResult> FlyerResults { get; set; } = new();
 }

@@ -76,6 +76,18 @@ export function FlyerList() {
       if (result.success && result.flyer && result.analysisResult) {
         const needsEventSelection = result.needsEventSelection || false;
         
+        // Ensure flyers array exists (backward compatibility)
+        if (!result.analysisResult.flyers || result.analysisResult.flyers.length === 0) {
+          // If old format, convert to new format
+          if (result.analysisResult.clubNights && result.analysisResult.clubNights.length > 0) {
+            result.analysisResult.flyers = [{ clubNights: result.analysisResult.clubNights }];
+          } else {
+            setError('No flyer data found in analysis');
+            setUploading(false);
+            return;
+          }
+        }
+        
         // Check if any club nights need year selection (across all flyers)
         const needsYearSelection = result.analysisResult.clubNights.some(
           (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 1

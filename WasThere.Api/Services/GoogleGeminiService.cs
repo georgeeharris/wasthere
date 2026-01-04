@@ -360,15 +360,28 @@ Please analyze the flyer and return the JSON:";
 
             if (analysisData?.Flyers == null || analysisData.Flyers.Count == 0)
             {
-                diagnostics.Metadata["FlyersFound"] = "0";
-                
-                _logger.LogWarning("No flyers found in analysis");
-                return new FlyerAnalysisResult
+                // Check for old format (backward compatibility)
+                if (analysisData?.ClubNights != null && analysisData.ClubNights.Count > 0)
                 {
-                    Success = false,
-                    ErrorMessage = "No flyers found in image",
-                    Diagnostics = diagnostics
-                };
+                    // Convert old format to new format
+                    analysisData.Flyers = new List<FlyerData>
+                    {
+                        new FlyerData { ClubNights = analysisData.ClubNights }
+                    };
+                    _logger.LogInformation("Converted old format response to new format");
+                }
+                else
+                {
+                    diagnostics.Metadata["FlyersFound"] = "0";
+                    
+                    _logger.LogWarning("No flyers found in analysis");
+                    return new FlyerAnalysisResult
+                    {
+                        Success = false,
+                        ErrorMessage = "No flyers found in image",
+                        Diagnostics = diagnostics
+                    };
+                }
             }
             
             // Count total club nights across all flyers
@@ -421,6 +434,10 @@ Please analyze the flyer and return the JSON:";
     private class FlyerAnalysisData
     {
         [JsonPropertyName("flyers")]
-        public List<FlyerData> Flyers { get; set; } = new();
+        public List<FlyerData>? Flyers { get; set; }
+        
+        // For backward compatibility with old format
+        [JsonPropertyName("clubNights")]
+        public List<ClubNightData>? ClubNights { get; set; }
     }
 }

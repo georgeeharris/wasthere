@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using WasThere.Api.Models;
 
 namespace WasThere.Api.Services;
@@ -11,7 +12,7 @@ public class FlyerAnalysisResult
 {
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
-    public List<ClubNightData> ClubNights { get; set; } = new();
+    public List<FlyerData> Flyers { get; set; } = new();
     public DiagnosticInfo Diagnostics { get; set; } = new();
     
     // For logging purposes
@@ -19,6 +20,15 @@ public class FlyerAnalysisResult
     public string? GeminiRawResponse { get; set; }
     public long ImageSizeBytes { get; set; }
     public string? ImageMimeType { get; set; }
+    
+    // Legacy property for backward compatibility - returns all club nights from all flyers
+    public List<ClubNightData> ClubNights => Flyers.SelectMany(f => f.ClubNights).ToList();
+}
+
+public class FlyerData
+{
+    [JsonPropertyName("clubNights")]
+    public List<ClubNightData> ClubNights { get; set; } = new();
 }
 
 public class ClubNightData

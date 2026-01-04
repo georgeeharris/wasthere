@@ -89,21 +89,28 @@ public class GoogleGeminiService : IGoogleGeminiService
             diagnostics.Metadata["MimeType"] = mimeType;
 
             // Construct the prompt for analyzing the flyer
-            var prompt = @"Analyze this club/event flyer image and extract the following information in JSON format:
+            var prompt = @"Analyze this club/event flyer image and extract the following information in JSON format.
+
+If the image contains MULTIPLE SEPARATE FLYERS (e.g., front and back of different flyers), return an array of flyer objects.
+If the image contains a SINGLE FLYER (even with multiple dates), return an array with one flyer object.
 
 {
-  ""clubNights"": [
+  ""flyers"": [
     {
-      ""eventName"": ""The event name (e.g., 'Fabric', 'Ministry of Sound') or null if unclear"",
-      ""venueName"": ""The venue name"",
-      ""date"": ""The FULL date in ISO format (YYYY-MM-DD) if year is visible, otherwise null"",
-      ""dayOfWeek"": ""Day of week if visible (e.g., 'Friday', 'Saturday') - IMPORTANT for date inference"",
-      ""month"": numeric month (1-12) if visible,
-      ""day"": numeric day of month (1-31) if visible,
-      ""acts"": [
+      ""clubNights"": [
         {
-          ""name"": ""Act name without performance type indicators"",
-          ""isLiveSet"": true or false
+          ""eventName"": ""The event name (e.g., 'Fabric', 'Ministry of Sound') or null if unclear"",
+          ""venueName"": ""The venue name"",
+          ""date"": ""The FULL date in ISO format (YYYY-MM-DD) if year is visible, otherwise null"",
+          ""dayOfWeek"": ""Day of week if visible (e.g., 'Friday', 'Saturday') - IMPORTANT for date inference"",
+          ""month"": numeric month (1-12) if visible,
+          ""day"": numeric day of month (1-31) if visible,
+          ""acts"": [
+            {
+              ""name"": ""Act name without performance type indicators"",
+              ""isLiveSet"": true or false
+            }
+          ]
         }
       ]
     }
@@ -111,9 +118,11 @@ public class GoogleGeminiService : IGoogleGeminiService
 }
 
 Important instructions:
-1. Extract ALL dates shown on the flyer - create a separate club night entry for each date
-2. For 'Residents' or 'Resident DJs', add them as acts on EVERY club night date
-3. **EVENT NAME EXTRACTION - CRITICAL**:
+1. **MULTIPLE FLYERS**: If the image shows multiple distinct flyers (different events/venues), create a separate flyer object for each one in the array
+2. **SINGLE FLYER**: If it's a single flyer (even with multiple dates), return one flyer object with all club nights in its clubNights array
+3. Extract ALL dates shown on each flyer - create a separate club night entry for each date within that flyer
+4. For 'Residents' or 'Resident DJs', add them as acts on EVERY club night date for that flyer
+5. **EVENT NAME EXTRACTION - CRITICAL**:
    - ONLY extract a specific, identifiable event name if it is clearly visible (e.g., 'Fabric', 'Ministry of Sound', 'Bugged Out')
    - Set eventName to null or empty string if:
      * No clear event/club night name is visible
@@ -122,24 +131,23 @@ Important instructions:
    - DO NOT make up or infer event names
    - DO NOT use generic placeholder names like 'Club Night'
    - When in doubt, set eventName to null - the user will be prompted to select the correct event
-4. Include all performing artists/DJs listed
-5. **CRITICAL**: If a listing combines multiple acts with separators like '&', 'and', 'B2B', 'b2b', 'vs', 'VS', or similar, split them into separate act entries. For example:
+6. Include all performing artists/DJs listed
+7. **CRITICAL**: If a listing combines multiple acts with separators like '&', 'and', 'B2B', 'b2b', 'vs', 'VS', or similar, split them into separate act entries. For example:
    - 'DJ A & DJ B' should become two acts: 'DJ A' and 'DJ B'
    - 'Artist X B2B Artist Y' should become two acts: 'Artist X' and 'Artist Y'
    - 'DJ 1 vs DJ 2' should become two acts: 'DJ 1' and 'DJ 2'
-6. For each act, determine if it's a live set:
+8. For each act, determine if it's a live set:
    - Set isLiveSet to true if the act has indicators like '(live)', '(live set)', '(live PA)', 'live', or similar
    - Set isLiveSet to false if it has '(DJ set)', '(DJ)', or no indicator (default to DJ set)
    - Remove the performance type indicators from the name (e.g., 'Dave Clarke (live)' should be just 'Dave Clarke')
-7. **DATE EXTRACTION**:
+9. **DATE EXTRACTION**:
    - If the full date with year is visible (e.g., '27 May 2003'), provide it in the 'date' field as 'YYYY-MM-DD'
    - If only partial date is visible (e.g., 'Friday 27th May' without year), set 'date' to null and provide:
      * 'dayOfWeek': the day name if visible (very important for inferring year)
      * 'month': the numeric month (1-12)
      * 'day': the numeric day of month (1-31)
-8. If multiple dates are shown, create separate entries for each date
-9. Only extract information that is clearly visible in the flyer
-10. Return ONLY valid JSON, no additional text or markdown
+10. Only extract information that is clearly visible in the flyer
+11. Return ONLY valid JSON, no additional text or markdown
 
 Please analyze the flyer and return the JSON:";
 
@@ -350,27 +358,30 @@ Please analyze the flyer and return the JSON:";
                 };
             }
 
-            if (analysisData?.ClubNights == null || analysisData.ClubNights.Count == 0)
+            if (analysisData?.Flyers == null || analysisData.Flyers.Count == 0)
             {
-                diagnostics.Metadata["ClubNightsFound"] = "0";
+                diagnostics.Metadata["FlyersFound"] = "0";
                 
-                _logger.LogWarning("No club nights found in analysis");
+                _logger.LogWarning("No flyers found in analysis");
                 return new FlyerAnalysisResult
                 {
                     Success = false,
-                    ErrorMessage = "No club nights found in flyer",
+                    ErrorMessage = "No flyers found in image",
                     Diagnostics = diagnostics
                 };
             }
             
-            diagnostics.Metadata["ClubNightsFound"] = analysisData.ClubNights.Count.ToString();
+            // Count total club nights across all flyers
+            var totalClubNights = analysisData.Flyers.Sum(f => f.ClubNights.Count);
+            diagnostics.Metadata["FlyersFound"] = analysisData.Flyers.Count.ToString();
+            diagnostics.Metadata["ClubNightsFound"] = totalClubNights.ToString();
             overallStopwatch.Stop();
             diagnostics.Metadata["TotalDurationMs"] = overallStopwatch.ElapsedMilliseconds.ToString();
 
             return new FlyerAnalysisResult
             {
                 Success = true,
-                ClubNights = analysisData.ClubNights,
+                Flyers = analysisData.Flyers,
                 Diagnostics = diagnostics,
                 GeminiPrompt = prompt,
                 GeminiRawResponse = textResponse,
@@ -409,7 +420,7 @@ Please analyze the flyer and return the JSON:";
 
     private class FlyerAnalysisData
     {
-        [JsonPropertyName("clubNights")]
-        public List<ClubNightData> ClubNights { get; set; } = new();
+        [JsonPropertyName("flyers")]
+        public List<FlyerData> Flyers { get; set; } = new();
     }
 }

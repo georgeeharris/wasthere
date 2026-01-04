@@ -88,9 +88,15 @@ export interface ActData {
   isLiveSet: boolean;
 }
 
+export interface FlyerData {
+  clubNights: ClubNightData[];
+}
+
 export interface FlyerAnalysisResult {
   success: boolean;
   errorMessage?: string | null;
-  clubNights: ClubNightData[];
+  flyers: FlyerData[];
   diagnostics: DiagnosticInfo;
+  // Legacy property for backward compatibility
+  clubNights: ClubNightData[];
 }

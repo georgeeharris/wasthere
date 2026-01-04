@@ -1023,8 +1023,8 @@ public class FlyersController : ControllerBase
             return true;
         }
         
-        var lowerVenueName = venueName.ToLower();
-        return UncertainVenueIndicators.Any(indicator => lowerVenueName.Contains(indicator));
+        return UncertainVenueIndicators.Any(indicator => 
+            venueName.Contains(indicator, StringComparison.OrdinalIgnoreCase));
     }
 
     private void GenerateThumbnail(string sourcePath, string thumbnailPath, int width, int height)

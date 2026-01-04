@@ -91,8 +91,11 @@ public class GoogleGeminiService : IGoogleGeminiService
             // Construct the prompt for analyzing the flyer
             var prompt = @"Analyze this club/event flyer image and extract the following information in JSON format.
 
-If the image contains MULTIPLE SEPARATE FLYERS (e.g., front and back of different flyers), return an array of flyer objects.
-If the image contains a SINGLE FLYER (even with multiple dates), return an array with one flyer object.
+**IMPORTANT - Determining Multiple Flyers:**
+- Return MULTIPLE flyer objects ONLY if the image shows physically distinct, separate flyers (e.g., a photo of 4 different flyers laid on a table, or multiple flyers in different sections of the image)
+- Each separate flyer will typically have its own distinct design, logo, or visual boundary
+- Return ONE flyer object if it's a single flyer design (even if it shows multiple dates/events on that one flyer)
+- When in doubt, treat it as a single flyer
 
 {
   ""flyers"": [

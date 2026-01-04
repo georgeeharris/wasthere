@@ -88,11 +88,6 @@ export function FlyerList() {
           }
         }
         
-        // Check if any club nights need year selection (across all flyers)
-        const needsYearSelection = result.analysisResult.clubNights.some(
-          (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 1
-        );
-
         // Store pending analysis for wizard flow
         setPendingAnalysis({
           flyerId: result.flyer.id,
@@ -231,7 +226,9 @@ export function FlyerList() {
         });
       });
       
-      // Use the first event selection (for now, we assume all flyers in one image are the same event)
+      // NOTE: Current limitation - we use the first event selection for all club nights
+      // because the Flyer database model only supports one EventId per image upload.
+      // If multiple different events are detected in one image, users should upload them separately.
       const firstEventId = eventSelections.size > 0 ? Array.from(eventSelections.values())[0] : undefined;
       
       completeUploadWithYears(flyerId, analysisResult, mergedYearSelections, firstEventId)
@@ -362,7 +359,9 @@ export function FlyerList() {
         });
       });
       
-      // Use the first event selection (for now, we assume all flyers in one image are the same event)
+      // NOTE: Current limitation - we use the first event selection for all club nights
+      // because the Flyer database model only supports one EventId per image upload.
+      // If multiple different events are detected in one image, users should upload them separately.
       const firstEventId = flyerEventSelections.size > 0 ? Array.from(flyerEventSelections.values())[0] : undefined;
       
       try {

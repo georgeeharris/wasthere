@@ -3,12 +3,20 @@ import type { Act } from '../types';
 import { actsApi } from '../services/api';
 import { usePagination } from '../hooks/usePagination';
 import { Pagination } from './Pagination';
+import { useNavigate } from 'react-router-dom';
 
 export function ActList() {
+  const navigate = useNavigate();
   const [acts, setActs] = useState<Act[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [newActName, setNewActName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
+
+  // Filter acts based on search query
+  const filteredActs = acts.filter(act =>
+    act.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const {
     currentPage,
@@ -18,7 +26,7 @@ export function ActList() {
     totalItems,
     setPage,
     setPageSize,
-  } = usePagination({ items: acts, initialPageSize: 10 });
+  } = usePagination({ items: filteredActs, initialPageSize: 10 });
 
   useEffect(() => {
     loadActs();
@@ -88,7 +96,30 @@ export function ActList() {
 
   return (
     <div className="card">
-      <h2>Acts</h2>
+      <div className="card-header">
+        <h2>Acts</h2>
+        <div className="master-list-nav">
+          <button onClick={() => navigate('/master/events')} className="btn btn-small">
+            Events
+          </button>
+          <button onClick={() => navigate('/master/venues')} className="btn btn-small">
+            Venues
+          </button>
+          <button onClick={() => navigate('/master/acts')} className="btn btn-small active">
+            Acts
+          </button>
+        </div>
+      </div>
+
+      <div className="search-box">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search acts..."
+          className="input"
+        />
+      </div>
       
       <form onSubmit={handleCreate} className="form">
         <input

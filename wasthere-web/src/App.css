@@ -100,10 +100,30 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .card-header h2 {
   margin: 0;
+}
+
+.master-list-nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.master-list-nav .btn.active {
+  background-color: #646cff;
+  color: white;
+}
+
+.search-box {
+  margin-bottom: 1.5rem;
+}
+
+.search-box .input {
+  width: 100%;
 }
 
 .form {

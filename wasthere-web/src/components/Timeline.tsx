@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { ClubNight, Event } from '../types';
 import { clubNightsApi, eventsApi, flyersApi } from '../services/api';
 
 export function Timeline() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number>(0);
   const [clubNights, setClubNights] = useState<ClubNight[]>([]);
@@ -11,6 +13,17 @@ export function Timeline() {
   useEffect(() => {
     loadEvents();
   }, []);
+
+  // Read eventId from URL on load
+  useEffect(() => {
+    const eventIdParam = searchParams.get('eventId');
+    if (eventIdParam) {
+      const eventId = parseInt(eventIdParam, 10);
+      if (!isNaN(eventId)) {
+        setSelectedEventId(eventId);
+      }
+    }
+  }, [searchParams]);
 
   const loadClubNights = useCallback(async () => {
     setLoading(true);
@@ -127,6 +140,16 @@ export function Timeline() {
     return new Date(2000, month, 1).toLocaleDateString('en-GB', { month: 'long' });
   };
 
+  // Update URL when event selection changes
+  const handleEventChange = (eventId: number) => {
+    setSelectedEventId(eventId);
+    if (eventId > 0) {
+      setSearchParams({ eventId: eventId.toString() });
+    } else {
+      setSearchParams({});
+    }
+  };
+
   return (
     <div className="card">
       <div className="card-header">
@@ -138,7 +161,7 @@ export function Timeline() {
         <select
           id="event-select"
           value={selectedEventId}
-          onChange={(e) => setSelectedEventId(Number(e.target.value))}
+          onChange={(e) => handleEventChange(Number(e.target.value))}
           className="input"
         >
           <option value={0}>Choose an event...</option>

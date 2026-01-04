@@ -64,13 +64,29 @@ export function EventList(_props: EventListProps) {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this event?')) return;
-
     try {
+      // Get delete impact first
+      const impact = await eventsApi.getDeleteImpact(id);
+      
+      // Build warning message
+      let message = 'Are you sure you want to delete this event?';
+      if (impact.clubNightsCount > 0 || impact.flyersCount > 0) {
+        message += '\n\nThis will also delete:';
+        if (impact.clubNightsCount > 0) {
+          message += `\n- ${impact.clubNightsCount} club night${impact.clubNightsCount !== 1 ? 's' : ''}`;
+        }
+        if (impact.flyersCount > 0) {
+          message += `\n- ${impact.flyersCount} flyer${impact.flyersCount !== 1 ? 's' : ''}`;
+        }
+      }
+      
+      if (!confirm(message)) return;
+
       await eventsApi.delete(id);
       await loadEvents();
     } catch (error) {
       console.error('Failed to delete event:', error);
+      alert('Failed to delete event. It may be referenced by other records.');
     }
   };
 

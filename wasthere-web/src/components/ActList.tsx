@@ -60,13 +60,24 @@ export function ActList() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this act?')) return;
-
     try {
+      // Get delete impact first
+      const impact = await actsApi.getDeleteImpact(id);
+      
+      // Build warning message
+      let message = 'Are you sure you want to delete this act?';
+      if (impact.clubNightActsCount > 0) {
+        message += '\n\nThis will also delete:';
+        message += `\n- ${impact.clubNightActsCount} club night performance${impact.clubNightActsCount !== 1 ? 's' : ''}`;
+      }
+      
+      if (!confirm(message)) return;
+
       await actsApi.delete(id);
       await loadActs();
     } catch (error) {
       console.error('Failed to delete act:', error);
+      alert('Failed to delete act. It may be referenced by other records.');
     }
   };
 

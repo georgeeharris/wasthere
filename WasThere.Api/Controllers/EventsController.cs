@@ -72,6 +72,25 @@ public class EventsController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("{id}/delete-impact")]
+    public async Task<ActionResult<object>> GetDeleteImpact(int id)
+    {
+        var eventItem = await _context.Events.FindAsync(id);
+        if (eventItem == null)
+        {
+            return NotFound();
+        }
+
+        var clubNightsCount = await _context.ClubNights.CountAsync(cn => cn.EventId == id);
+        var flyersCount = await _context.Flyers.CountAsync(f => f.EventId == id);
+
+        return Ok(new
+        {
+            clubNightsCount,
+            flyersCount
+        });
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteEvent(int id)
     {

@@ -76,6 +76,11 @@ export const eventsApi = {
       method: 'DELETE',
     });
   },
+
+  getDeleteImpact: async (id: number): Promise<EventDeleteImpact> => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/events/${id}/delete-impact`);
+    return response.json();
+  },
 };
 
 // Venues API
@@ -105,6 +110,11 @@ export const venuesApi = {
       method: 'DELETE',
     });
   },
+
+  getDeleteImpact: async (id: number): Promise<VenueDeleteImpact> => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/venues/${id}/delete-impact`);
+    return response.json();
+  },
 };
 
 // Acts API
@@ -133,6 +143,11 @@ export const actsApi = {
     await authenticatedFetch(`${API_BASE_URL}/acts/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  getDeleteImpact: async (id: number): Promise<ActDeleteImpact> => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/acts/${id}/delete-impact`);
+    return response.json();
   },
 };
 
@@ -297,4 +312,18 @@ export interface AutoPopulateResult {
   actsCreated: number;
   errors: string[];
   diagnostics?: DiagnosticInfo;
+}
+
+export interface EventDeleteImpact {
+  clubNightsCount: number;
+  flyersCount: number;
+}
+
+export interface VenueDeleteImpact {
+  clubNightsCount: number;
+  flyersCount: number;
+}
+
+export interface ActDeleteImpact {
+  clubNightActsCount: number;
 }

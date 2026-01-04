@@ -12,11 +12,17 @@ export function ActList() {
   const [newActName, setNewActName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // Filter acts based on search query
-  const filteredActs = acts.filter(act =>
-    act.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter and sort acts based on search query and sort order
+  const filteredActs = acts
+    .filter(act =>
+      act.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      const comparison = a.name.localeCompare(b.name);
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
 
   const {
     currentPage,
@@ -119,6 +125,16 @@ export function ActList() {
           placeholder="Search acts..."
           className="input"
         />
+      </div>
+
+      <div className="sort-header">
+        <button 
+          className="sort-button"
+          onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+          title={sortOrder === 'asc' ? 'Sort Z-A' : 'Sort A-Z'}
+        >
+          Name {sortOrder === 'asc' ? '↑' : '↓'}
+        </button>
       </div>
       
       <form onSubmit={handleCreate} className="form">

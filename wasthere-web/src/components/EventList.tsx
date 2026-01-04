@@ -12,11 +12,17 @@ export function EventList() {
   const [newEventName, setNewEventName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // Filter events based on search query
-  const filteredEvents = events.filter(event =>
-    event.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter and sort events based on search query and sort order
+  const filteredEvents = events
+    .filter(event =>
+      event.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      const comparison = a.name.localeCompare(b.name);
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
 
   const {
     currentPage,
@@ -124,6 +130,16 @@ export function EventList() {
           placeholder="Search events..."
           className="input"
         />
+      </div>
+
+      <div className="sort-header">
+        <button 
+          className="sort-button"
+          onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+          title={sortOrder === 'asc' ? 'Sort Z-A' : 'Sort A-Z'}
+        >
+          Name {sortOrder === 'asc' ? '↑' : '↓'}
+        </button>
       </div>
       
       <form onSubmit={handleCreate} className="form">

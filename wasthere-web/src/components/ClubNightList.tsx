@@ -20,6 +20,33 @@ export function ClubNightList() {
     acts: [] as ClubNightActDto[],
   });
 
+  // Filter and sort state
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [filterEventId, setFilterEventId] = useState<number>(0);
+  const [filterVenueId, setFilterVenueId] = useState<number>(0);
+  const [filterActIds, setFilterActIds] = useState<number[]>([]);
+  const [filterDateFrom, setFilterDateFrom] = useState<string>('');
+  const [filterDateTo, setFilterDateTo] = useState<string>('');
+
+  // Apply filters and sorting to club nights
+  const filteredAndSortedClubNights = clubNights
+    .filter(cn => {
+      if (filterEventId > 0 && cn.eventId !== filterEventId) return false;
+      if (filterVenueId > 0 && cn.venueId !== filterVenueId) return false;
+      if (filterActIds.length > 0) {
+        const hasAct = cn.acts.some(act => filterActIds.includes(act.actId));
+        if (!hasAct) return false;
+      }
+      if (filterDateFrom && cn.date < filterDateFrom) return false;
+      if (filterDateTo && cn.date > filterDateTo) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const comparison = a.date.localeCompare(b.date);
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
   const {
     currentPage,
     pageSize,
@@ -28,7 +55,7 @@ export function ClubNightList() {
     totalItems,
     setPage,
     setPageSize,
-  } = usePagination({ items: clubNights, initialPageSize: 10 });
+  } = usePagination({ items: filteredAndSortedClubNights, initialPageSize: 10 });
 
   useEffect(() => {
     loadAll();
@@ -189,6 +216,123 @@ export function ClubNightList() {
             </button>
           </div>
         </form>
+      )}
+
+      <div className="filter-sort-controls">
+        <button 
+          className="btn btn-small"
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          {showFilters ? '▼' : '▶'} Filters
+        </button>
+        
+        <div className="sort-control">
+          <label>Sort by date:</label>
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+            className="input"
+          >
+            <option value="desc">Newest first</option>
+            <option value="asc">Oldest first</option>
+          </select>
+        </div>
+      </div>
+
+      {showFilters && (
+        <div className="filter-panel">
+          <div className="filter-panel-header">
+            <h4>Filter Club Nights</h4>
+            <button 
+              className="btn btn-small"
+              onClick={() => {
+                setFilterEventId(0);
+                setFilterVenueId(0);
+                setFilterActIds([]);
+                setFilterDateFrom('');
+                setFilterDateTo('');
+              }}
+            >
+              Clear All
+            </button>
+          </div>
+          
+          <div className="filter-grid">
+            <div className="filter-group">
+              <label>Event</label>
+              <select
+                value={filterEventId}
+                onChange={(e) => setFilterEventId(Number(e.target.value))}
+                className="input"
+              >
+                <option value={0}>All events</option>
+                {events.map((event) => (
+                  <option key={event.id} value={event.id}>
+                    {event.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-group">
+              <label>Venue</label>
+              <select
+                value={filterVenueId}
+                onChange={(e) => setFilterVenueId(Number(e.target.value))}
+                className="input"
+              >
+                <option value={0}>All venues</option>
+                {venues.map((venue) => (
+                  <option key={venue.id} value={venue.id}>
+                    {venue.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-group">
+              <label>Date From</label>
+              <input
+                type="date"
+                value={filterDateFrom}
+                onChange={(e) => setFilterDateFrom(e.target.value)}
+                className="input"
+              />
+            </div>
+
+            <div className="filter-group">
+              <label>Date To</label>
+              <input
+                type="date"
+                value={filterDateTo}
+                onChange={(e) => setFilterDateTo(e.target.value)}
+                className="input"
+              />
+            </div>
+
+            <div className="filter-group filter-group-full">
+              <label>Acts (select one or more)</label>
+              <div className="checkbox-group">
+                {acts.map((act) => (
+                  <label key={act.id} className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={filterActIds.includes(act.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFilterActIds([...filterActIds, act.id]);
+                        } else {
+                          setFilterActIds(filterActIds.filter(id => id !== act.id));
+                        }
+                      }}
+                    />
+                    {act.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="club-nights-list">

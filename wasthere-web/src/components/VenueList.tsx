@@ -12,11 +12,17 @@ export function VenueList() {
   const [newVenueName, setNewVenueName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // Filter venues based on search query
-  const filteredVenues = venues.filter(venue =>
-    venue.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter and sort venues based on search query and sort order
+  const filteredVenues = venues
+    .filter(venue =>
+      venue.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      const comparison = a.name.localeCompare(b.name);
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
 
   const {
     currentPage,
@@ -124,6 +130,16 @@ export function VenueList() {
           placeholder="Search venues..."
           className="input"
         />
+      </div>
+
+      <div className="sort-header">
+        <button 
+          className="sort-button"
+          onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+          title={sortOrder === 'asc' ? 'Sort Z-A' : 'Sort A-Z'}
+        >
+          Name {sortOrder === 'asc' ? '↑' : '↓'}
+        </button>
       </div>
       
       <form onSubmit={handleCreate} className="form">

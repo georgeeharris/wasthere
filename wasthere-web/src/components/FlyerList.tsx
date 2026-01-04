@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { Flyer, DiagnosticInfo, FlyerAnalysisResult } from '../types';
-import { flyersApi, type AutoPopulateResult, type YearSelection } from '../services/api';
+import type { Flyer, DiagnosticInfo, FlyerAnalysisResult, Event, Venue } from '../types';
+import { flyersApi, eventsApi, venuesApi, type AutoPopulateResult, type YearSelection } from '../services/api';
 import { ErrorDiagnostics } from './ErrorDiagnostics';
 import { YearSelectionModal } from './YearSelectionModal';
 import { EventSelectionModal } from './EventSelectionModal';
@@ -20,6 +20,32 @@ export function FlyerList() {
   const [pendingAnalysis, setPendingAnalysis] = useState<{ flyerId: number; analysisResult: FlyerAnalysisResult; needsEventSelection: boolean } | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
+  // Filter and sort state
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [filterEventId, setFilterEventId] = useState<number>(0);
+  const [filterVenueId, setFilterVenueId] = useState<number>(0);
+  const [filterDateFrom, setFilterDateFrom] = useState<string>('');
+  const [filterDateTo, setFilterDateTo] = useState<string>('');
+
+  // Get all events and venues for filtering
+  const [events, setEvents] = useState<Event[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
+
+  // Apply filters and sorting to flyers
+  const filteredAndSortedFlyers = flyers
+    .filter(flyer => {
+      if (filterEventId > 0 && flyer.eventId !== filterEventId) return false;
+      if (filterVenueId > 0 && flyer.venueId !== filterVenueId) return false;
+      if (filterDateFrom && new Date(flyer.earliestClubNightDate) < new Date(filterDateFrom)) return false;
+      if (filterDateTo && new Date(flyer.earliestClubNightDate) > new Date(filterDateTo)) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const comparison = new Date(a.earliestClubNightDate).getTime() - new Date(b.earliestClubNightDate).getTime();
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+
   const {
     currentPage,
     pageSize,
@@ -28,18 +54,30 @@ export function FlyerList() {
     totalItems,
     setPage,
     setPageSize,
-  } = usePagination({ items: flyers, initialPageSize: 12 });
+  } = usePagination({ items: filteredAndSortedFlyers, initialPageSize: 12 });
 
   useEffect(() => {
     loadFlyers();
+    loadFiltersData();
   }, []);
+
+  const loadFiltersData = async () => {
+    try {
+      const [eventsData, venuesData] = await Promise.all([
+        eventsApi.getAll(),
+        venuesApi.getAll(),
+      ]);
+      setEvents(eventsData);
+      setVenues(venuesData);
+    } catch (error) {
+      console.error('Failed to load filter data:', error);
+    }
+  };
 
   const loadFlyers = async () => {
     try {
       const data = await flyersApi.getAll();
-      // Shuffle array for random ordering
-      const shuffled = [...data].sort(() => Math.random() - 0.5);
-      setFlyers(shuffled);
+      setFlyers(data);
     } catch (error) {
       console.error('Failed to load flyers:', error);
       setError('Failed to load flyers');
@@ -340,9 +378,107 @@ export function FlyerList() {
         </form>
       </div>
 
+      <div className="filter-sort-controls">
+        <button 
+          className="btn btn-small"
+          onClick={() => setShowFilters(!showFilters)}
+        >
+          {showFilters ? '▼' : '▶'} Filters
+        </button>
+        
+        <div className="sort-control">
+          <label>Sort by date:</label>
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+            className="input"
+          >
+            <option value="desc">Newest first</option>
+            <option value="asc">Oldest first</option>
+          </select>
+        </div>
+      </div>
+
+      {showFilters && (
+        <div className="filter-panel">
+          <div className="filter-panel-header">
+            <h4>Filter Flyers</h4>
+            <button 
+              className="btn btn-small"
+              onClick={() => {
+                setFilterEventId(0);
+                setFilterVenueId(0);
+                setFilterDateFrom('');
+                setFilterDateTo('');
+              }}
+            >
+              Clear All
+            </button>
+          </div>
+          
+          <div className="filter-grid">
+            <div className="filter-group">
+              <label>Event</label>
+              <select
+                value={filterEventId}
+                onChange={(e) => setFilterEventId(Number(e.target.value))}
+                className="input"
+              >
+                <option value={0}>All events</option>
+                {events.map((event) => (
+                  <option key={event.id} value={event.id}>
+                    {event.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-group">
+              <label>Venue</label>
+              <select
+                value={filterVenueId}
+                onChange={(e) => setFilterVenueId(Number(e.target.value))}
+                className="input"
+              >
+                <option value={0}>All venues</option>
+                {venues.map((venue) => (
+                  <option key={venue.id} value={venue.id}>
+                    {venue.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-group">
+              <label>Date From</label>
+              <input
+                type="date"
+                value={filterDateFrom}
+                onChange={(e) => setFilterDateFrom(e.target.value)}
+                className="input"
+              />
+            </div>
+
+            <div className="filter-group">
+              <label>Date To</label>
+              <input
+                type="date"
+                value={filterDateTo}
+                onChange={(e) => setFilterDateTo(e.target.value)}
+                className="input"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flyers-grid">
-        {flyers.length === 0 ? (
-          <div className="empty-state">No flyers uploaded yet.</div>
+        {filteredAndSortedFlyers.length === 0 ? (
+          <div className="empty-state">
+            {flyers.length === 0 
+              ? 'No flyers uploaded yet.' 
+              : 'No flyers match the current filters.'}
+          </div>
         ) : (
           paginatedItems.map((flyer) => (
             <div key={flyer.id} className="flyer-card">
@@ -382,7 +518,7 @@ export function FlyerList() {
         )}
       </div>
 
-      {flyers.length > 0 && (
+      {filteredAndSortedFlyers.length > 0 && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

@@ -64,12 +64,18 @@ public class FlyerConversionLoggerStepDefinitions : IDisposable
         var result = new FlyerAnalysisResult
         {
             Success = true,
-            ClubNights = Enumerable.Range(1, count).Select(i => new ClubNightData
+            Flyers = new List<FlyerData>
             {
-                EventName = $"Event {i}",
-                VenueName = $"Venue {i}",
-                Acts = new List<ActData>()
-            }).ToList()
+                new FlyerData
+                {
+                    ClubNights = Enumerable.Range(1, count).Select(i => new ClubNightData
+                    {
+                        EventName = $"Event {i}",
+                        VenueName = $"Venue {i}",
+                        Acts = new List<ActData>()
+                    }).ToList()
+                }
+            }
         };
 
         _logger.LogAnalysisResult(_logId, result);

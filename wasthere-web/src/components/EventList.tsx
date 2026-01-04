@@ -5,11 +5,7 @@ import { usePagination } from '../hooks/usePagination';
 import { Pagination } from './Pagination';
 import { useNavigate } from 'react-router-dom';
 
-interface EventListProps {
-  onEventSelect?: (event: Event) => void;
-}
-
-export function EventList(_props: EventListProps) {
+export function EventList() {
   const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState('');

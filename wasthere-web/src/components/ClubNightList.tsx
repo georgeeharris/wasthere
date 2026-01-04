@@ -38,12 +38,12 @@ export function ClubNightList() {
         const hasAct = cn.acts.some(act => filterActIds.includes(act.actId));
         if (!hasAct) return false;
       }
-      if (filterDateFrom && cn.date < filterDateFrom) return false;
-      if (filterDateTo && cn.date > filterDateTo) return false;
+      if (filterDateFrom && new Date(cn.date) < new Date(filterDateFrom)) return false;
+      if (filterDateTo && new Date(cn.date) > new Date(filterDateTo)) return false;
       return true;
     })
     .sort((a, b) => {
-      const comparison = a.date.localeCompare(b.date);
+      const comparison = new Date(a.date).getTime() - new Date(b.date).getTime();
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 

@@ -37,12 +37,12 @@ export function FlyerList() {
     .filter(flyer => {
       if (filterEventId > 0 && flyer.eventId !== filterEventId) return false;
       if (filterVenueId > 0 && flyer.venueId !== filterVenueId) return false;
-      if (filterDateFrom && flyer.earliestClubNightDate < filterDateFrom) return false;
-      if (filterDateTo && flyer.earliestClubNightDate > filterDateTo) return false;
+      if (filterDateFrom && new Date(flyer.earliestClubNightDate) < new Date(filterDateFrom)) return false;
+      if (filterDateTo && new Date(flyer.earliestClubNightDate) > new Date(filterDateTo)) return false;
       return true;
     })
     .sort((a, b) => {
-      const comparison = a.earliestClubNightDate.localeCompare(b.earliestClubNightDate);
+      const comparison = new Date(a.earliestClubNightDate).getTime() - new Date(b.earliestClubNightDate).getTime();
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 

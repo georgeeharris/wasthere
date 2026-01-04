@@ -210,7 +210,19 @@ export function FlyerList() {
     if (nextIndex >= totalFlyers) {
       // All flyers processed, complete the upload
       setUploading(true);
-      completeUploadWithYears(flyerId, analysisResult, undefined, undefined)
+      
+      // Merge all year selections from all flyers into one map
+      const mergedYearSelections = new Map<string, number>();
+      yearSelections.forEach((flyerSelections) => {
+        flyerSelections.forEach((year, key) => {
+          mergedYearSelections.set(key, year);
+        });
+      });
+      
+      // Use the first event selection (for now, we assume all flyers in one image are the same event)
+      const firstEventId = eventSelections.size > 0 ? Array.from(eventSelections.values())[0] : undefined;
+      
+      completeUploadWithYears(flyerId, analysisResult, mergedYearSelections, firstEventId)
         .finally(() => {
           setPendingAnalysis(null);
           setCurrentFlyerIndex(0);
@@ -330,15 +342,23 @@ export function FlyerList() {
       // All flyers processed or single flyer, complete upload
       setUploading(true);
       
-      // For now, use the legacy approach - will need backend changes to properly handle multi-flyer
-      const eventId = flyerEventSelections.get(currentFlyerIndex);
+      // Merge all year selections from all flyers
+      const mergedYearSelections = new Map<string, number>();
+      newYearSelections.forEach((flyerSelections) => {
+        flyerSelections.forEach((year, key) => {
+          mergedYearSelections.set(key, year);
+        });
+      });
+      
+      // Use the first event selection (for now, we assume all flyers in one image are the same event)
+      const firstEventId = flyerEventSelections.size > 0 ? Array.from(flyerEventSelections.values())[0] : undefined;
       
       try {
         await completeUploadWithYears(
           pendingAnalysis.flyerId, 
           pendingAnalysis.analysisResult, 
-          selectedYearsMap, 
-          eventId || undefined
+          mergedYearSelections, 
+          firstEventId || undefined
         );
       } finally {
         setPendingAnalysis(null);

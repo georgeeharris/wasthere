@@ -94,7 +94,7 @@ public class GoogleGeminiService : IGoogleGeminiService
 {
   ""clubNights"": [
     {
-      ""eventName"": ""The event name (e.g., 'Fabric', 'Ministry of Sound')"",
+      ""eventName"": ""The event name (e.g., 'Fabric', 'Ministry of Sound') or null if unclear"",
       ""venueName"": ""The venue name"",
       ""date"": ""The FULL date in ISO format (YYYY-MM-DD) if year is visible, otherwise null"",
       ""dayOfWeek"": ""Day of week if visible (e.g., 'Friday', 'Saturday') - IMPORTANT for date inference"",
@@ -113,7 +113,15 @@ public class GoogleGeminiService : IGoogleGeminiService
 Important instructions:
 1. Extract ALL dates shown on the flyer - create a separate club night entry for each date
 2. For 'Residents' or 'Resident DJs', add them as acts on EVERY club night date
-3. Include the event name (the recurring night name like 'Fabric' or the specific event title)
+3. **EVENT NAME EXTRACTION - CRITICAL**:
+   - ONLY extract a specific, identifiable event name if it is clearly visible (e.g., 'Fabric', 'Ministry of Sound', 'Bugged Out')
+   - Set eventName to null or empty string if:
+     * No clear event/club night name is visible
+     * Only generic terms appear (e.g., 'Club Night', 'DJ Night', 'Party', etc.)
+     * You are unsure what the actual event name is
+   - DO NOT make up or infer event names
+   - DO NOT use generic placeholder names like 'Club Night'
+   - When in doubt, set eventName to null - the user will be prompted to select the correct event
 4. Include all performing artists/DJs listed
 5. **CRITICAL**: If a listing combines multiple acts with separators like '&', 'and', 'B2B', 'b2b', 'vs', 'VS', or similar, split them into separate act entries. For example:
    - 'DJ A & DJ B' should become two acts: 'DJ A' and 'DJ B'

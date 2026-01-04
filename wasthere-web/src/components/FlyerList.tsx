@@ -18,7 +18,6 @@ export function FlyerList() {
   const [showEventSelection, setShowEventSelection] = useState(false);
   const [showYearSelection, setShowYearSelection] = useState(false);
   const [pendingAnalysis, setPendingAnalysis] = useState<{ flyerId: number; analysisResult: FlyerAnalysisResult; needsEventSelection: boolean } | null>(null);
-  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [currentFlyerIndex, setCurrentFlyerIndex] = useState<number>(0);
   const [flyerEventSelections, setFlyerEventSelections] = useState<Map<number, number>>(new Map());
   const [flyerYearSelections, setFlyerYearSelections] = useState<Map<number, Map<string, number>>>(new Map());

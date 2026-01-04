@@ -368,7 +368,7 @@
   position: absolute;
   left: 0.8rem;
   top: 50%;
-  transform: translateY(-50%);
+  margin-top: -8px;
   width: 16px;
   height: 16px;
   border: 2px solid rgba(255, 255, 255, 0.3);
@@ -378,7 +378,7 @@
 }
 
 @keyframes spin {
-  to { transform: translateY(-50%) rotate(360deg); }
+  to { transform: rotate(360deg); }
 }
 
 .progress-text {

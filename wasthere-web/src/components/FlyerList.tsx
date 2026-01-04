@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { Flyer, DiagnosticInfo, FlyerAnalysisResult, Event, Venue } from '../types';
-import { flyersApi, eventsApi, venuesApi, type AutoPopulateResult, type YearSelection } from '../services/api';
+import { flyersApi, eventsApi, venuesApi, type AutoPopulateResult, type YearSelection, type FlyerUploadResult } from '../services/api';
 import { ErrorDiagnostics } from './ErrorDiagnostics';
 import { YearSelectionModal } from './YearSelectionModal';
 import { EventSelectionModal } from './EventSelectionModal';
@@ -86,6 +86,13 @@ export function FlyerList() {
     }
   };
 
+  const getFlyersNeedingUserInput = (flyerResults: FlyerUploadResult[]) => {
+    return flyerResults.filter(fr => 
+      fr.success && (fr.needsEventSelection || 
+        (fr.analysisResult?.clubNights.some(cn => cn.candidateYears.length > 0) ?? false))
+    );
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setSelectedFile(e.target.files[0]);
@@ -123,10 +130,7 @@ export function FlyerList() {
       console.log(`Upload complete. Processed ${totalFlyers} flyer(s)`);
 
       // Check if any flyers need user input
-      const flyersNeedingInput = flyerResults.filter(fr => 
-        fr.success && (fr.needsEventSelection || 
-          (fr.analysisResult?.clubNights.some(cn => cn.candidateYears.length > 0) ?? false))
-      );
+      const flyersNeedingInput = getFlyersNeedingUserInput(flyerResults);
 
       if (flyersNeedingInput.length > 0) {
         // Start wizard flow for flyers needing input

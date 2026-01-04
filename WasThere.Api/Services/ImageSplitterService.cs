@@ -119,21 +119,8 @@ Return ONLY valid JSON, no additional text.";
 
             _logger.LogInformation("Bounding box detection response: {Response}", textResponse);
 
-            // Clean up response
-            textResponse = textResponse.Trim();
-            if (textResponse.StartsWith("```json"))
-            {
-                textResponse = textResponse.Substring(7);
-            }
-            if (textResponse.StartsWith("```"))
-            {
-                textResponse = textResponse.Substring(3);
-            }
-            if (textResponse.EndsWith("```"))
-            {
-                textResponse = textResponse.Substring(0, textResponse.Length - 3);
-            }
-            textResponse = textResponse.Trim();
+            // Clean up response - remove markdown code blocks
+            textResponse = CleanJsonResponse(textResponse);
 
             // Parse JSON response
             var boundingBoxData = JsonSerializer.Deserialize<BoundingBoxResponse>(textResponse, new JsonSerializerOptions
@@ -194,11 +181,11 @@ Return ONLY valid JSON, no additional text.";
                 var width = (int)(bbox.Width * imageWidth);
                 var height = (int)(bbox.Height * imageHeight);
 
-                // Ensure coordinates are within bounds
-                x = Math.Max(0, Math.Min(x, imageWidth - 1));
-                y = Math.Max(0, Math.Min(y, imageHeight - 1));
-                width = Math.Max(1, Math.Min(width, imageWidth - x));
-                height = Math.Max(1, Math.Min(height, imageHeight - y));
+                // Ensure coordinates are within bounds and dimensions are reasonable
+                x = Math.Max(0, Math.Min(x, imageWidth - 10)); // Leave at least 10 pixels for crop
+                y = Math.Max(0, Math.Min(y, imageHeight - 10));
+                width = Math.Max(10, Math.Min(width, imageWidth - x)); // Minimum 10x10 crop
+                height = Math.Max(10, Math.Min(height, imageHeight - y));
 
                 // Clone the image and crop to bounding box
                 using var croppedImage = image.Clone(ctx => 
@@ -250,6 +237,28 @@ Return ONLY valid JSON, no additional text.";
             ".webp" => "image/webp",
             _ => "image/jpeg"
         };
+    }
+
+    private static string CleanJsonResponse(string response)
+    {
+        response = response.Trim();
+        
+        // Remove markdown code block markers
+        if (response.StartsWith("```json"))
+        {
+            response = response.Substring(7);
+        }
+        else if (response.StartsWith("```"))
+        {
+            response = response.Substring(3);
+        }
+        
+        if (response.EndsWith("```"))
+        {
+            response = response.Substring(0, response.Length - 3);
+        }
+        
+        return response.Trim();
     }
 
     private class BoundingBoxResponse

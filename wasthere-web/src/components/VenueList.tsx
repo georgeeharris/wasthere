@@ -3,12 +3,20 @@ import type { Venue } from '../types';
 import { venuesApi } from '../services/api';
 import { usePagination } from '../hooks/usePagination';
 import { Pagination } from './Pagination';
+import { useNavigate } from 'react-router-dom';
 
 export function VenueList() {
+  const navigate = useNavigate();
   const [venues, setVenues] = useState<Venue[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [newVenueName, setNewVenueName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
+
+  // Filter venues based on search query
+  const filteredVenues = venues.filter(venue =>
+    venue.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const {
     currentPage,
@@ -18,7 +26,7 @@ export function VenueList() {
     totalItems,
     setPage,
     setPageSize,
-  } = usePagination({ items: venues, initialPageSize: 10 });
+  } = usePagination({ items: filteredVenues, initialPageSize: 10 });
 
   useEffect(() => {
     loadVenues();
@@ -93,7 +101,30 @@ export function VenueList() {
 
   return (
     <div className="card">
-      <h2>Venues</h2>
+      <div className="card-header">
+        <h2>Venues</h2>
+        <div className="master-list-nav">
+          <button onClick={() => navigate('/master/events')} className="btn btn-small">
+            Events
+          </button>
+          <button onClick={() => navigate('/master/venues')} className="btn btn-small active">
+            Venues
+          </button>
+          <button onClick={() => navigate('/master/acts')} className="btn btn-small">
+            Acts
+          </button>
+        </div>
+      </div>
+
+      <div className="search-box">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search venues..."
+          className="input"
+        />
+      </div>
       
       <form onSubmit={handleCreate} className="form">
         <input

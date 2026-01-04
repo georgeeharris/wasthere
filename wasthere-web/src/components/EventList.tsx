@@ -3,16 +3,24 @@ import type { Event } from '../types';
 import { eventsApi } from '../services/api';
 import { usePagination } from '../hooks/usePagination';
 import { Pagination } from './Pagination';
+import { useNavigate } from 'react-router-dom';
 
 interface EventListProps {
   onEventSelect?: (event: Event) => void;
 }
 
 export function EventList(_props: EventListProps) {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [newEventName, setNewEventName] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingName, setEditingName] = useState('');
+
+  // Filter events based on search query
+  const filteredEvents = events.filter(event =>
+    event.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const {
     currentPage,
@@ -22,7 +30,7 @@ export function EventList(_props: EventListProps) {
     totalItems,
     setPage,
     setPageSize,
-  } = usePagination({ items: events, initialPageSize: 10 });
+  } = usePagination({ items: filteredEvents, initialPageSize: 10 });
 
   useEffect(() => {
     loadEvents();
@@ -97,7 +105,30 @@ export function EventList(_props: EventListProps) {
 
   return (
     <div className="card">
-      <h2>Events</h2>
+      <div className="card-header">
+        <h2>Events</h2>
+        <div className="master-list-nav">
+          <button onClick={() => navigate('/master/events')} className="btn btn-small active">
+            Events
+          </button>
+          <button onClick={() => navigate('/master/venues')} className="btn btn-small">
+            Venues
+          </button>
+          <button onClick={() => navigate('/master/acts')} className="btn btn-small">
+            Acts
+          </button>
+        </div>
+      </div>
+
+      <div className="search-box">
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search events..."
+          className="input"
+        />
+      </div>
       
       <form onSubmit={handleCreate} className="form">
         <input

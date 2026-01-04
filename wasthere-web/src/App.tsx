@@ -41,7 +41,7 @@ function App() {
     if (location.pathname === '/timeline') return 'timeline';
     if (location.pathname === '/nights') return 'nights';
     if (location.pathname === '/flyers') return 'flyers';
-    if (location.pathname === '/master') return 'master';
+    if (location.pathname.startsWith('/master')) return 'master';
     return 'home'; // default
   };
 
@@ -94,7 +94,7 @@ function App() {
           </button>
           <button
             className={`tab ${activeTab === 'master' ? 'active' : ''}`}
-            onClick={() => handleNavigation('/master')}
+            onClick={() => handleNavigation('/master/events')}
           >
             Master Lists
           </button>
@@ -125,13 +125,9 @@ function App() {
           <Route path="/timeline" element={<Timeline />} />
           <Route path="/nights" element={<ClubNightList />} />
           <Route path="/flyers" element={<FlyerList />} />
-          <Route path="/master" element={
-            <div className="master-lists">
-              <EventList />
-              <VenueList />
-              <ActList />
-            </div>
-          } />
+          <Route path="/master/events" element={<EventList />} />
+          <Route path="/master/venues" element={<VenueList />} />
+          <Route path="/master/acts" element={<ActList />} />
         </Routes>
       </main>
     </div>

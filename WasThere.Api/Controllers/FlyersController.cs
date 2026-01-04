@@ -23,6 +23,7 @@ public class FlyersController : ControllerBase
     private const string UploadsFolder = "uploads";
     private const int ThumbnailWidth = 300;
     private const int ThumbnailHeight = 400;
+    private const string PlaceholderEventName = "Unknown Event (Pending Selection)";
     private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
 
     public FlyersController(
@@ -173,7 +174,7 @@ public class FlyersController : ControllerBase
         if (needsEventSelection)
         {
             // Use a placeholder event name that will be replaced when user selects an event
-            eventName = "Unknown Event (Pending Selection)";
+            eventName = PlaceholderEventName;
             var existingPlaceholder = await _context.Events
                 .FirstOrDefaultAsync(e => e.Name == eventName);
             eventEntity = existingPlaceholder ?? new Event { Name = eventName };

@@ -3,6 +3,7 @@ import type { Flyer, DiagnosticInfo, FlyerAnalysisResult } from '../types';
 import { flyersApi, type AutoPopulateResult, type YearSelection } from '../services/api';
 import { ErrorDiagnostics } from './ErrorDiagnostics';
 import { YearSelectionModal } from './YearSelectionModal';
+import { EventSelectionModal } from './EventSelectionModal';
 import { usePagination } from '../hooks/usePagination';
 import { Pagination } from './Pagination';
 
@@ -14,8 +15,10 @@ export function FlyerList() {
   const [diagnostics, setDiagnostics] = useState<DiagnosticInfo | undefined>(undefined);
   const [autoPopulating, setAutoPopulating] = useState<number | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showEventSelection, setShowEventSelection] = useState(false);
   const [showYearSelection, setShowYearSelection] = useState(false);
-  const [pendingAnalysis, setPendingAnalysis] = useState<{ flyerId: number; analysisResult: FlyerAnalysisResult } | null>(null);
+  const [pendingAnalysis, setPendingAnalysis] = useState<{ flyerId: number; analysisResult: FlyerAnalysisResult; needsEventSelection: boolean } | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
 
   const {
     currentPage,
@@ -68,21 +71,29 @@ export function FlyerList() {
       const result = await flyersApi.upload(selectedFile);
       
       if (result.success && result.flyer && result.analysisResult) {
+        const needsEventSelection = result.needsEventSelection || false;
+        
         // Check if any club nights need year selection
         const needsYearSelection = result.analysisResult.clubNights.some(
           (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 1
         );
 
-        if (needsYearSelection) {
-          // Show year selection modal
-          setPendingAnalysis({
-            flyerId: result.flyer.id,
-            analysisResult: result.analysisResult
-          });
+        // Store pending analysis for wizard flow
+        setPendingAnalysis({
+          flyerId: result.flyer.id,
+          analysisResult: result.analysisResult,
+          needsEventSelection: needsEventSelection
+        });
+
+        // Start wizard flow: event selection first (if needed), then year selection (if needed)
+        if (needsEventSelection) {
+          setShowEventSelection(true);
+          setSuccessMessage('Flyer uploaded and analyzed! Please select the event.');
+        } else if (needsYearSelection) {
           setShowYearSelection(true);
           setSuccessMessage('Flyer uploaded and analyzed! Please select years for the dates.');
         } else {
-          // No year selection needed, complete upload automatically
+          // No user input needed, complete upload automatically
           await completeUploadWithYears(result.flyer.id, result.analysisResult);
         }
         
@@ -106,7 +117,7 @@ export function FlyerList() {
     }
   };
 
-  const completeUploadWithYears = async (flyerId: number, analysisResult: FlyerAnalysisResult, selectedYearsMap?: Map<string, number>) => {
+  const completeUploadWithYears = async (flyerId: number, analysisResult: FlyerAnalysisResult, selectedYearsMap?: Map<string, number>, eventId?: number) => {
     try {
       // Build the year selections array
       const selectedYears: YearSelection[] = [];
@@ -133,7 +144,7 @@ export function FlyerList() {
         }
       }
 
-      const result = await flyersApi.completeUpload(flyerId, selectedYears);
+      const result = await flyersApi.completeUpload(flyerId, selectedYears, eventId);
       
       if (result.success) {
         setSuccessMessage(`Flyer processed! ${result.message}`);
@@ -150,6 +161,41 @@ export function FlyerList() {
     }
   };
 
+  const handleEventSelectionConfirm = (eventId: number) => {
+    if (!pendingAnalysis) return;
+    
+    // Store the selected event ID
+    setSelectedEventId(eventId);
+    setShowEventSelection(false);
+    
+    // Check if year selection is also needed
+    const needsYearSelection = pendingAnalysis.analysisResult.clubNights.some(
+      (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 1
+    );
+    
+    if (needsYearSelection) {
+      // Proceed to year selection
+      setShowYearSelection(true);
+      setSuccessMessage('Event selected! Now please select years for the dates.');
+    } else {
+      // No year selection needed, complete upload with selected event
+      setUploading(true);
+      completeUploadWithYears(pendingAnalysis.flyerId, pendingAnalysis.analysisResult, undefined, eventId)
+        .finally(() => {
+          setPendingAnalysis(null);
+          setSelectedEventId(null);
+          setUploading(false);
+        });
+    }
+  };
+
+  const handleEventSelectionCancel = () => {
+    setShowEventSelection(false);
+    setPendingAnalysis(null);
+    setSelectedEventId(null);
+    setError('Upload cancelled. Please delete the flyer if needed.');
+  };
+
   const handleYearSelectionConfirm = async (selectedYearsMap: Map<string, number>) => {
     if (!pendingAnalysis) return;
     
@@ -157,9 +203,10 @@ export function FlyerList() {
     setUploading(true);
     
     try {
-      await completeUploadWithYears(pendingAnalysis.flyerId, pendingAnalysis.analysisResult, selectedYearsMap);
+      await completeUploadWithYears(pendingAnalysis.flyerId, pendingAnalysis.analysisResult, selectedYearsMap, selectedEventId || undefined);
     } finally {
       setPendingAnalysis(null);
+      setSelectedEventId(null);
       setUploading(false);
     }
   };
@@ -167,6 +214,7 @@ export function FlyerList() {
   const handleYearSelectionCancel = () => {
     setShowYearSelection(false);
     setPendingAnalysis(null);
+    setSelectedEventId(null);
     setError('Upload cancelled. Please delete the flyer if needed.');
   };
 
@@ -222,6 +270,13 @@ export function FlyerList() {
             setError(null);
             setDiagnostics(undefined);
           }}
+        />
+      )}
+      
+      {showEventSelection && (
+        <EventSelectionModal
+          onConfirm={handleEventSelectionConfirm}
+          onCancel={handleEventSelectionCancel}
         />
       )}
       

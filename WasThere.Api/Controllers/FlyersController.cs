@@ -164,25 +164,37 @@ public class FlyersController : ControllerBase
         // Use the first club night's data to determine event and venue
         var firstClubNight = analysisResult.ClubNights[0];
         
-        // Find or create Event
+        // Check if event name was detected
         var eventName = firstClubNight.EventName?.Trim();
-        if (string.IsNullOrEmpty(eventName))
+        var needsEventSelection = string.IsNullOrEmpty(eventName);
+        
+        // Create a placeholder event if event name is missing
+        Event eventEntity;
+        if (needsEventSelection)
         {
-            try { System.IO.File.Delete(tempFilePath); } catch { }
-            return BadRequest(new FlyerUploadResponse
+            // Use a placeholder event name that will be replaced when user selects an event
+            eventName = "Unknown Event (Pending Selection)";
+            var existingPlaceholder = await _context.Events
+                .FirstOrDefaultAsync(e => e.Name == eventName);
+            eventEntity = existingPlaceholder ?? new Event { Name = eventName };
+            if (existingPlaceholder == null)
             {
-                Success = false,
-                Message = "Could not determine event name from flyer."
-            });
+                _context.Events.Add(eventEntity);
+                await _context.SaveChangesAsync();
+            }
         }
-
-        var existingEvent = await _context.Events
-            .FirstOrDefaultAsync(e => e.Name.ToLower() == eventName.ToLower());
-        var eventEntity = existingEvent ?? new Event { Name = eventName };
-        if (existingEvent == null)
+        else
         {
-            _context.Events.Add(eventEntity);
-            await _context.SaveChangesAsync();
+            // Find or create Event with the detected name
+            // eventName is guaranteed to be non-null here because needsEventSelection is false
+            var existingEvent = await _context.Events
+                .FirstOrDefaultAsync(e => e.Name.ToLower() == eventName!.ToLower());
+            eventEntity = existingEvent ?? new Event { Name = eventName! };
+            if (existingEvent == null)
+            {
+                _context.Events.Add(eventEntity);
+                await _context.SaveChangesAsync();
+            }
         }
 
         // Find or create Venue
@@ -291,19 +303,36 @@ public class FlyersController : ControllerBase
 
         // Check if any club nights have candidate years that need selection
         var needsYearSelection = analysisResult.ClubNights.Any(cn => cn.CandidateYears.Count > 0);
-        var message = needsYearSelection 
-            ? "Flyer uploaded and analyzed successfully. Please select years for the dates."
-            : "Flyer uploaded and analyzed successfully.";
+        
+        // Build the message based on what user input is needed
+        string message;
+        if (needsEventSelection && needsYearSelection)
+        {
+            message = "Flyer uploaded and analyzed successfully. Please select the event and years for the dates.";
+        }
+        else if (needsEventSelection)
+        {
+            message = "Flyer uploaded and analyzed successfully. Please select the event.";
+        }
+        else if (needsYearSelection)
+        {
+            message = "Flyer uploaded and analyzed successfully. Please select years for the dates.";
+        }
+        else
+        {
+            message = "Flyer uploaded and analyzed successfully.";
+        }
         
         // Complete the log (upload phase)
         _conversionLogger.CompleteConversionLog(logId, true, 
-            $"Upload complete. {(needsYearSelection ? "Awaiting year selection." : "Ready for processing.")}");
+            $"Upload complete. {(needsEventSelection || needsYearSelection ? "Awaiting user input." : "Ready for processing.")}");
 
         // Return response with analysis result containing candidate years
-        // Do NOT create club nights yet - user needs to select years first if needed
+        // Do NOT create club nights yet - user needs to select event/years first if needed
         var response = new FlyerUploadResponse
         {
             Success = true,
+            NeedsEventSelection = needsEventSelection,
             Message = message,
             Flyer = await _context.Flyers
                 .Include(f => f.Event)
@@ -367,6 +396,35 @@ public class FlyersController : ControllerBase
 
         // Log user year selections
         _conversionLogger.LogUserYearSelection(logId, request.SelectedYears);
+
+        // If user selected a different event, update the flyer and event name in club nights
+        if (request.EventId.HasValue && request.EventId.Value != flyer.EventId)
+        {
+            var selectedEvent = await _context.Events.FindAsync(request.EventId.Value);
+            if (selectedEvent == null)
+            {
+                _conversionLogger.CompleteConversionLog(logId, false, "Selected event not found");
+                return BadRequest(new AutoPopulateResult
+                {
+                    Success = false,
+                    Message = "Selected event not found"
+                });
+            }
+            
+            // Update flyer's event
+            flyer.EventId = selectedEvent.Id;
+            _context.Flyers.Update(flyer);
+            await _context.SaveChangesAsync();
+            
+            // Update event name in all club nights in the analysis result
+            foreach (var clubNight in analysisResult.ClubNights)
+            {
+                clubNight.EventName = selectedEvent.Name;
+            }
+            
+            _conversionLogger.LogDatabaseOperation(logId, "UPDATE", "Flyer", 
+                $"Event changed to {selectedEvent.Name}", flyer.Id);
+        }
 
         // Process club nights with the selected years
         var result = await ProcessAnalysisResultWithSelectedYears(flyer, analysisResult, request.SelectedYears, logId);
@@ -963,6 +1021,7 @@ public class FlyersController : ControllerBase
 public class CompleteUploadRequest
 {
     public List<YearSelection> SelectedYears { get; set; } = new();
+    public int? EventId { get; set; }
 }
 
 public class AutoPopulateResult
@@ -985,4 +1044,5 @@ public class FlyerUploadResponse
     public AutoPopulateResult? AutoPopulateResult { get; set; }
     public DiagnosticInfo? Diagnostics { get; set; }
     public FlyerAnalysisResult? AnalysisResult { get; set; }
+    public bool NeedsEventSelection { get; set; }
 }

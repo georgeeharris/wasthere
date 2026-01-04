@@ -243,14 +243,14 @@ export const flyersApi = {
     return `${API_BASE_URL.replace('/api', '')}/${filePath.replace(/\\/g, '/')}`;
   },
   
-  completeUpload: async (flyerId: number, selectedYears: YearSelection[]): Promise<AutoPopulateResult> => {
+  completeUpload: async (flyerId: number, selectedYears: YearSelection[], eventId?: number): Promise<AutoPopulateResult> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000); // 5 minutes
 
     try {
       const response = await authenticatedFetch(`${API_BASE_URL}/flyers/${flyerId}/complete-upload`, {
         method: 'POST',
-        body: JSON.stringify({ selectedYears }),
+        body: JSON.stringify({ selectedYears, eventId }),
         signal: controller.signal,
       });
 
@@ -279,6 +279,7 @@ export interface FlyerUploadResponse {
   autoPopulateResult?: AutoPopulateResult;
   diagnostics?: DiagnosticInfo;
   analysisResult?: FlyerAnalysisResult;
+  needsEventSelection?: boolean;
 }
 
 export interface YearSelection {

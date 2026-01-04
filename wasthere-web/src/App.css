@@ -11,10 +11,35 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
 .app-header h1 {
   font-size: 1.8rem;
   margin-bottom: 1rem;
   font-weight: 600;
+}
+
+.burger-menu {
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+}
+
+.burger-menu span {
+  display: block;
+  width: 25px;
+  height: 3px;
+  background-color: white;
+  transition: all 0.3s;
+  border-radius: 2px;
 }
 
 .tabs {
@@ -221,6 +246,44 @@
 }
 
 @media (max-width: 768px) {
+  .app-header h1 {
+    font-size: 1.3rem;
+    margin-bottom: 0;
+  }
+
+  .burger-menu {
+    display: flex;
+  }
+
+  .tabs {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: #1a1a1a;
+    flex-direction: column;
+    padding: 1rem 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+    z-index: 100;
+  }
+
+  .tabs.mobile-open {
+    display: flex;
+  }
+
+  .tab {
+    width: 100%;
+    text-align: left;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .tab.active {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-left: 4px solid #646cff;
+  }
+
   .app-main {
     padding: 1rem;
   }
@@ -239,6 +302,10 @@
 
   .timeline-month-marker h4 {
     font-size: 1.1rem;
+  }
+
+  .home-action-cards {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -281,10 +348,48 @@
 .btn-primary {
   background-color: #646cff;
   color: white;
+  position: relative;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background-color: #535bf2;
+}
+
+.btn-primary.btn-loading {
+  padding-left: 2.5rem;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.spinner {
+  position: absolute;
+  left: 0.8rem;
+  top: 50%;
+  margin-top: -8px;
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.progress-text {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  border-radius: 4px;
+  color: #1976d2;
+  font-size: 0.95rem;
+  font-weight: 500;
 }
 
 .btn-small {
@@ -464,24 +569,6 @@
   color: #999;
   padding: 2rem;
   font-style: italic;
-}
-
-@media (max-width: 768px) {
-  .app-main {
-    padding: 1rem;
-  }
-
-  .master-lists {
-    grid-template-columns: 1fr;
-  }
-
-  .form {
-    flex-direction: column;
-  }
-
-  .checkbox-group {
-    grid-template-columns: 1fr;
-  }
 }
 
 .flyers-grid {
@@ -800,5 +887,104 @@
 .diagnostics-help li {
   margin-bottom: 0.25rem;
   color: #555;
+}
+
+/* Home Page Styles */
+.home-page h2 {
+  font-size: 2rem;
+  margin-bottom: 1.5rem;
+  color: #1a1a1a;
+}
+
+.home-mission {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  border-left: 4px solid #646cff;
+}
+
+.home-mission p {
+  margin-bottom: 1rem;
+  line-height: 1.6;
+  color: #333;
+}
+
+.home-mission p:last-child {
+  margin-bottom: 0;
+}
+
+.home-actions {
+  margin-bottom: 2rem;
+}
+
+.home-actions h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #1a1a1a;
+}
+
+.home-action-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.home-action-card {
+  background: #f9f9f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.home-action-card h4 {
+  font-size: 1.2rem;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.home-action-card p {
+  line-height: 1.6;
+  color: #555;
+  flex: 1;
+  margin: 0;
+}
+
+.home-action-card .btn {
+  align-self: flex-start;
+}
+
+.home-about {
+  background: #e3f2fd;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border-left: 4px solid #2196f3;
+}
+
+.home-about h3 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: #1976d2;
+}
+
+.home-steps {
+  list-style-position: inside;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+.home-steps li {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+  color: #333;
+  padding-left: 0.5rem;
+}
+
+.home-steps li strong {
+  color: #1976d2;
 }
 

@@ -175,7 +175,7 @@ export function ErrorDiagnostics({ error, diagnostics, onClose }: ErrorDiagnosti
           <div className="diagnostics-help">
             <p><strong>What to do next:</strong></p>
             <ul>
-              <li>Click "Copy Diagnostics" to copy detailed error information</li>
+              {diagnostics && <li>Click "Copy Diagnostics" above to copy detailed error information</li>}
               <li>Share the diagnostics with support or development team</li>
               <li>Try uploading a different image</li>
               <li>Check your network connection</li>

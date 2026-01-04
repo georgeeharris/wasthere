@@ -473,8 +473,12 @@ export function FlyerList() {
       )}
 
       <div className="flyers-grid">
-        {flyers.length === 0 ? (
-          <div className="empty-state">No flyers uploaded yet.</div>
+        {filteredAndSortedFlyers.length === 0 ? (
+          <div className="empty-state">
+            {flyers.length === 0 
+              ? 'No flyers uploaded yet.' 
+              : 'No flyers match the current filters.'}
+          </div>
         ) : (
           paginatedItems.map((flyer) => (
             <div key={flyer.id} className="flyer-card">
@@ -514,7 +518,7 @@ export function FlyerList() {
         )}
       </div>
 
-      {flyers.length > 0 && (
+      {filteredAndSortedFlyers.length > 0 && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

@@ -336,8 +336,12 @@ export function ClubNightList() {
       )}
 
       <div className="club-nights-list">
-        {clubNights.length === 0 ? (
-          <p className="empty-state">No club nights yet. Add one above!</p>
+        {filteredAndSortedClubNights.length === 0 ? (
+          <p className="empty-state">
+            {clubNights.length === 0 
+              ? 'No club nights yet. Add one above!' 
+              : 'No club nights match the current filters.'}
+          </p>
         ) : (
           paginatedItems.map((clubNight) => (
             <div key={clubNight.id} className="club-night-card">
@@ -376,7 +380,7 @@ export function ClubNightList() {
         )}
       </div>
 
-      {clubNights.length > 0 && (
+      {filteredAndSortedClubNights.length > 0 && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}

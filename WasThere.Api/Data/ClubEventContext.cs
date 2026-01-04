@@ -34,18 +34,18 @@ public class ClubEventContext : DbContext
             .WithMany(a => a.ClubNightActs)
             .HasForeignKey(cna => cna.ActId);
         
-        // Configure Flyer relationships
+        // Configure Flyer relationships with cascade delete
         modelBuilder.Entity<Flyer>()
             .HasOne(f => f.Event)
             .WithMany()
             .HasForeignKey(f => f.EventId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
         
         modelBuilder.Entity<Flyer>()
             .HasOne(f => f.Venue)
             .WithMany()
             .HasForeignKey(f => f.VenueId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Cascade);
         
         modelBuilder.Entity<ClubNight>()
             .HasOne(cn => cn.Flyer)

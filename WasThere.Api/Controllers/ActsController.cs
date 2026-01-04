@@ -71,6 +71,23 @@ public class ActsController : ControllerBase
         return NoContent();
     }
 
+    [HttpGet("{id}/delete-impact")]
+    public async Task<ActionResult<object>> GetDeleteImpact(int id)
+    {
+        var act = await _context.Acts.FindAsync(id);
+        if (act == null)
+        {
+            return NotFound();
+        }
+
+        var clubNightActsCount = await _context.ClubNightActs.CountAsync(cna => cna.ActId == id);
+
+        return Ok(new
+        {
+            clubNightActsCount
+        });
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteAct(int id)
     {

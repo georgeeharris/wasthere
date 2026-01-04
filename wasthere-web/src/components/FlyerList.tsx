@@ -110,83 +110,63 @@ export function FlyerList() {
     try {
       const result = await flyersApi.upload(selectedFile);
       
-      if (result.success && result.flyer && result.analysisResult) {
-        const needsEventSelection = result.needsEventSelection || false;
-        
-        // Ensure flyers array exists (backward compatibility)
-        if (!result.analysisResult.flyers || result.analysisResult.flyers.length === 0) {
-          // If old format, convert to new format
-          if (result.analysisResult.clubNights && result.analysisResult.clubNights.length > 0) {
-            result.analysisResult.flyers = [{ clubNights: result.analysisResult.clubNights }];
-          } else {
-            setError('No flyer data found in analysis');
-            setUploading(false);
-            return;
-          }
-        }
-        
-        // Store pending analysis for wizard flow
-        setPendingAnalysis({
-          flyerId: result.flyer.id,
-          analysisResult: result.analysisResult,
-          needsEventSelection: needsEventSelection
-        });
+      if (!result.success) {
+        setError(result.message || 'Failed to upload and process flyer(s)');
+        setUploading(false);
+        return;
+      }
 
-        // Initialize wizard state
+      // Process results for each flyer
+      const totalFlyers = result.totalFlyers;
+      const flyerResults = result.flyerResults;
+
+      console.log(`Upload complete. Processed ${totalFlyers} flyer(s)`);
+
+      // Check if any flyers need user input
+      const flyersNeedingInput = flyerResults.filter(fr => 
+        fr.success && (fr.needsEventSelection || 
+          (fr.analysisResult?.clubNights.some(cn => cn.candidateYears.length > 0) ?? false))
+      );
+
+      if (flyersNeedingInput.length > 0) {
+        // Start wizard flow for flyers needing input
+        // For now, we'll process them sequentially
+        const firstFlyerNeedingInput = flyersNeedingInput[0];
+        
+        setPendingAnalysis({
+          flyerId: firstFlyerNeedingInput.flyer!.id,
+          analysisResult: firstFlyerNeedingInput.analysisResult!,
+          needsEventSelection: firstFlyerNeedingInput.needsEventSelection ?? false
+        });
+        
         setCurrentFlyerIndex(0);
         setFlyerEventSelections(new Map());
         setFlyerYearSelections(new Map());
 
-        const totalFlyers = result.analysisResult.flyers?.length || 1;
-        const firstFlyer = result.analysisResult.flyers?.[0];
-        
-        if (!firstFlyer || firstFlyer.clubNights.length === 0) {
-          setError('No flyer data found in analysis');
-          setUploading(false);
-          return;
-        }
-
-        // Check if first flyer needs event selection
-        const firstEventName = firstFlyer.clubNights[0]?.eventName;
-        const firstNeedsEventSelection = !firstEventName;
-        
-        // Check if first flyer needs year selection
-        const firstNeedsYearSelection = firstFlyer.clubNights.some(
-          (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 1
-        );
-
-        // Build appropriate message
-        let message = 'Flyer uploaded and analyzed!';
-        if (totalFlyers > 1) {
-          message += ` Found ${totalFlyers} flyers in the image.`;
-        }
-
-        // Start wizard flow for the first flyer
-        if (firstNeedsEventSelection) {
+        if (firstFlyerNeedingInput.needsEventSelection) {
           setShowEventSelection(true);
-          setSuccessMessage(message + ' Please select the event.');
-        } else if (firstNeedsYearSelection) {
-          setShowYearSelection(true);
-          setSuccessMessage(message + ' Please select years for the dates.');
-        } else if (totalFlyers > 1) {
-          // First flyer doesn't need input but there are more flyers
-          // Process next flyer or complete if all are done
-          processNextFlyer(result.flyer.id, result.analysisResult, 0, new Map(), new Map());
+          setSuccessMessage(firstFlyerNeedingInput.message);
         } else {
-          // Single flyer, no user input needed
-          await completeUploadWithYears(result.flyer.id, result.analysisResult);
+          const needsYearSelection = firstFlyerNeedingInput.analysisResult?.clubNights.some(
+            (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 0
+          );
+          if (needsYearSelection) {
+            setShowYearSelection(true);
+            setSuccessMessage(firstFlyerNeedingInput.message);
+          }
         }
-        
-        // Reset form
-        setSelectedFile(null);
-        
-        // Reset file input
-        const fileInput = document.getElementById('flyer-file') as HTMLInputElement;
-        if (fileInput) fileInput.value = '';
       } else {
-        setError(result.message || 'Failed to upload flyer');
-        setDiagnostics(result.diagnostics);
+        // All flyers processed successfully without needing input
+        setSuccessMessage(result.message);
+        await loadFlyers();
+        setTimeout(() => setSuccessMessage(null), 5000);
       }
+      
+      // Reset form
+      setSelectedFile(null);
+      const fileInput = document.getElementById('flyer-file') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+      
     } catch (error) {
       console.error('Failed to upload flyer:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to upload flyer';

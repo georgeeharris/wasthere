@@ -24,7 +24,9 @@ public class FlyersController : ControllerBase
     private const int ThumbnailWidth = 300;
     private const int ThumbnailHeight = 400;
     private const string PlaceholderEventName = "Unknown Event (Pending Selection)";
+    private const string PlaceholderVenueName = "Unknown Venue";
     private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+    private static readonly string[] UncertainVenueIndicators = { "pending", "unknown", "unclear", "n/a", "tbd" };
 
     public FlyersController(
         ClubEventContext context, 
@@ -202,10 +204,13 @@ public class FlyersController : ControllerBase
         var venueName = firstClubNight.VenueName?.Trim();
         Venue? venueEntity = null;
         
-        if (!string.IsNullOrEmpty(venueName))
+        // Check if venue name is uncertain or missing
+        if (IsUncertainVenueName(venueName))
         {
+            // Use placeholder venue if name is uncertain or missing
+            venueName = PlaceholderVenueName;
             var existingVenue = await _context.Venues
-                .FirstOrDefaultAsync(v => v.Name.ToLower() == venueName.ToLower());
+                .FirstOrDefaultAsync(v => v.Name == venueName);
             venueEntity = existingVenue ?? new Venue { Name = venueName };
             if (existingVenue == null)
             {
@@ -215,11 +220,10 @@ public class FlyersController : ControllerBase
         }
         else
         {
-            // Create a placeholder venue if not detected
-            venueName = "Unknown Venue";
+            // Use detected venue name
             var existingVenue = await _context.Venues
-                .FirstOrDefaultAsync(v => v.Name == venueName);
-            venueEntity = existingVenue ?? new Venue { Name = venueName };
+                .FirstOrDefaultAsync(v => v.Name.ToLower() == venueName!.ToLower());
+            venueEntity = existingVenue ?? new Venue { Name = venueName! };
             if (existingVenue == null)
             {
                 _context.Venues.Add(venueEntity);
@@ -429,6 +433,24 @@ public class FlyersController : ControllerBase
 
         // Process club nights with the selected years
         var result = await ProcessAnalysisResultWithSelectedYears(flyer, analysisResult, request.SelectedYears, logId);
+        
+        // Update the flyer's EarliestClubNightDate based on the created club nights
+        if (result.Success && result.ClubNightsCreated > 0)
+        {
+            var earliestClubNight = await _context.ClubNights
+                .Where(cn => cn.FlyerId == flyer.Id)
+                .OrderBy(cn => cn.Date)
+                .FirstOrDefaultAsync();
+            
+            if (earliestClubNight != null)
+            {
+                flyer.EarliestClubNightDate = earliestClubNight.Date;
+                _context.Flyers.Update(flyer);
+                await _context.SaveChangesAsync();
+                _conversionLogger.LogDatabaseOperation(logId, "UPDATE", "Flyer", 
+                    $"Updated EarliestClubNightDate to {earliestClubNight.Date:yyyy-MM-dd}", flyer.Id);
+            }
+        }
         
         return Ok(result);
     }
@@ -710,23 +732,25 @@ public class FlyersController : ControllerBase
                 var venueName = clubNightData.VenueName?.Trim();
                 Venue? venueEntity = null;
                 
-                if (!string.IsNullOrEmpty(venueName))
+                // Check if venue name is uncertain or missing
+                if (IsUncertainVenueName(venueName))
                 {
+                    // Use venue from flyer if venue name is uncertain or missing
+                    venueEntity = await _context.Venues.FindAsync(flyer.VenueId);
+                }
+                else
+                {
+                    // Use detected venue name
                     var existingVenue = await _context.Venues
-                        .FirstOrDefaultAsync(v => v.Name.ToLower() == venueName.ToLower());
+                        .FirstOrDefaultAsync(v => v.Name.ToLower() == venueName!.ToLower());
                     
-                    venueEntity = existingVenue ?? new Venue { Name = venueName };
+                    venueEntity = existingVenue ?? new Venue { Name = venueName! };
                     if (existingVenue == null)
                     {
                         _context.Venues.Add(venueEntity);
                         await _context.SaveChangesAsync();
                         result.VenuesCreated++;
                     }
-                }
-                else
-                {
-                    // Use venue from flyer if not in analysis
-                    venueEntity = await _context.Venues.FindAsync(flyer.VenueId);
                 }
 
                 if (venueEntity == null)
@@ -848,24 +872,26 @@ public class FlyersController : ControllerBase
                 var venueName = clubNightData.VenueName?.Trim();
                 Venue? venueEntity = null;
                 
-                if (!string.IsNullOrEmpty(venueName))
+                // Check if venue name is uncertain or missing
+                if (IsUncertainVenueName(venueName))
                 {
+                    // Use venue from flyer if venue name is uncertain or missing
+                    venueEntity = await _context.Venues.FindAsync(flyer.VenueId);
+                }
+                else
+                {
+                    // Use detected venue name
                     var existingVenue = await _context.Venues
-                        .FirstOrDefaultAsync(v => v.Name.ToLower() == venueName.ToLower());
+                        .FirstOrDefaultAsync(v => v.Name.ToLower() == venueName!.ToLower());
                     
-                    venueEntity = existingVenue ?? new Venue { Name = venueName };
+                    venueEntity = existingVenue ?? new Venue { Name = venueName! };
                     if (existingVenue == null)
                     {
                         _context.Venues.Add(venueEntity);
                         await _context.SaveChangesAsync();
                         result.VenuesCreated++;
-                        _conversionLogger.LogDatabaseOperation(logId, "CREATE", "Venue", venueName, venueEntity.Id);
+                        _conversionLogger.LogDatabaseOperation(logId, "CREATE", "Venue", venueName!, venueEntity.Id);
                     }
-                }
-                else
-                {
-                    // Use venue from flyer if not in analysis
-                    venueEntity = await _context.Venues.FindAsync(flyer.VenueId);
                 }
 
                 if (venueEntity == null)
@@ -988,6 +1014,17 @@ public class FlyersController : ControllerBase
             .Where(ch => !invalidChars.Contains(ch))
             .ToArray());
         return sanitized.Replace(" ", "_");
+    }
+
+    private static bool IsUncertainVenueName(string? venueName)
+    {
+        if (string.IsNullOrWhiteSpace(venueName))
+        {
+            return true;
+        }
+        
+        var lowerVenueName = venueName.ToLower();
+        return UncertainVenueIndicators.Any(indicator => lowerVenueName.Contains(indicator));
     }
 
     private void GenerateThumbnail(string sourcePath, string thumbnailPath, int width, int height)

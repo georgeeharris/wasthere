@@ -8,6 +8,14 @@ interface FlyerPreviewModalProps {
   onCancel: () => void;
 }
 
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'];
+
+// Helper function to get club nights from a flyer result
+const getClubNightsFromFlyer = (flyerResult: FlyerUploadResult): ClubNightData[] => {
+  return flyerResult.analysisResult?.flyers?.[0]?.clubNights || flyerResult.analysisResult?.clubNights || [];
+};
+
 export function FlyerPreviewModal({ flyerResults, onConfirm, onCancel }: FlyerPreviewModalProps) {
   const [currentClubNightIndex, setCurrentClubNightIndex] = useState(0);
 
@@ -16,8 +24,8 @@ export function FlyerPreviewModal({ flyerResults, onConfirm, onCancel }: FlyerPr
     const allClubNights: Array<{ flyer: FlyerUploadResult; clubNight: ClubNightData; clubNightIndex: number }> = [];
     
     flyerResults.forEach((flyerResult) => {
-      if (flyerResult.success && flyerResult.analysisResult) {
-        const clubNights = flyerResult.analysisResult.flyers?.[0]?.clubNights || flyerResult.analysisResult.clubNights;
+      if (flyerResult.success) {
+        const clubNights = getClubNightsFromFlyer(flyerResult);
         clubNights.forEach((clubNight: ClubNightData, idx: number) => {
           allClubNights.push({ flyer: flyerResult, clubNight, clubNightIndex: idx });
         });
@@ -66,9 +74,7 @@ export function FlyerPreviewModal({ flyerResults, onConfirm, onCancel }: FlyerPr
     }
     
     if (clubNight.month && clubNight.day) {
-      const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-        'July', 'August', 'September', 'October', 'November', 'December'];
-      const monthName = monthNames[clubNight.month - 1];
+      const monthName = MONTH_NAMES[clubNight.month - 1];
       let dateStr = `${clubNight.dayOfWeek || ''} ${clubNight.day} ${monthName}`.trim();
       
       if (clubNight.candidateYears.length > 0) {

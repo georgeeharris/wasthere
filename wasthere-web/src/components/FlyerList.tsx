@@ -213,14 +213,21 @@ export function FlyerList() {
     setShowPreview(false);
     
     try {
-      // Delete all uploaded flyers
-      for (const flyerResult of pendingFlyerResults) {
-        if (flyerResult.flyer?.id) {
-          await flyersApi.delete(flyerResult.flyer.id);
-        }
+      // Delete all uploaded flyers in parallel
+      const deletePromises = pendingFlyerResults
+        .filter(flyerResult => flyerResult.flyer?.id)
+        .map(flyerResult => flyersApi.delete(flyerResult.flyer!.id));
+      
+      const results = await Promise.allSettled(deletePromises);
+      
+      const failedDeletions = results.filter(result => result.status === 'rejected').length;
+      
+      if (failedDeletions > 0) {
+        setError(`Upload cancelled. ${pendingFlyerResults.length - failedDeletions} flyer(s) deleted, but ${failedDeletions} failed. Please delete them manually.`);
+      } else {
+        setError('Upload cancelled. Flyers have been deleted.');
       }
       
-      setError('Upload cancelled. Flyers have been deleted.');
       setPendingFlyerResults([]);
     } catch (error) {
       console.error('Failed to delete flyers:', error);

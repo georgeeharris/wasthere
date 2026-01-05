@@ -27,6 +27,7 @@ export interface ClubNight {
   venueId: number;
   venueName: string;
   flyerId?: number | null;
+  flyerFilePath?: string | null;
   flyerThumbnailPath?: string | null;
   acts: ClubNightAct[];
 }

@@ -50,11 +50,13 @@ public class ClubNightsController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [AllowAnonymous]
     public async Task<ActionResult<object>> GetClubNight(int id)
     {
         var clubNight = await _context.ClubNights
             .Include(cn => cn.Event)
             .Include(cn => cn.Venue)
+            .Include(cn => cn.Flyer)
             .Include(cn => cn.ClubNightActs)
                 .ThenInclude(cna => cna.Act)
             .Where(cn => cn.Id == id)
@@ -66,6 +68,9 @@ public class ClubNightsController : ControllerBase
                 EventName = cn.Event!.Name,
                 VenueId = cn.VenueId,
                 VenueName = cn.Venue!.Name,
+                FlyerId = cn.FlyerId,
+                FlyerFilePath = cn.Flyer != null ? cn.Flyer.FilePath : null,
+                FlyerThumbnailPath = cn.Flyer != null ? cn.Flyer.ThumbnailPath : null,
                 Acts = cn.ClubNightActs.Select(cna => new
                 {
                     cna.ActId,

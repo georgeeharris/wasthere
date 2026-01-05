@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { ClubNight, Event, Venue, Act, ClubNightActDto } from '../types';
 import { clubNightsApi, eventsApi, venuesApi, actsApi } from '../services/api';
 import { ActSelector } from './ActSelector';
@@ -6,6 +7,7 @@ import { usePagination } from '../hooks/usePagination';
 import { Pagination } from './Pagination';
 
 export function ClubNightList() {
+  const navigate = useNavigate();
   const [clubNights, setClubNights] = useState<ClubNight[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -368,6 +370,9 @@ export function ClubNightList() {
               )}
               
               <div className="club-night-actions">
+                <button onClick={() => navigate(`/nights/${clubNight.id}`)} className="btn btn-small btn-primary">
+                  View Details
+                </button>
                 <button onClick={() => startEdit(clubNight)} className="btn btn-small">
                   Edit
                 </button>

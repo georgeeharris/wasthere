@@ -158,6 +158,14 @@ export const clubNightsApi = {
     return response.json();
   },
   
+  getById: async (id: number): Promise<ClubNight> => {
+    const response = await fetch(`${API_BASE_URL}/clubnights/${id}`);
+    if (!response.ok) {
+      throw new Error('Club night not found');
+    }
+    return response.json();
+  },
+  
   create: async (dto: ClubNightDto): Promise<ClubNight> => {
     const response = await authenticatedFetch(`${API_BASE_URL}/clubnights`, {
       method: 'POST',

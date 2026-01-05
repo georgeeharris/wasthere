@@ -6,6 +6,7 @@ import { EventList } from './components/EventList';
 import { VenueList } from './components/VenueList';
 import { ActList } from './components/ActList';
 import { ClubNightList } from './components/ClubNightList';
+import { ClubNightDetail } from './components/ClubNightDetail';
 import { FlyerList } from './components/FlyerList';
 import { Timeline } from './components/Timeline';
 import { Home } from './components/Home';
@@ -124,6 +125,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/timeline" element={<Timeline />} />
           <Route path="/nights" element={<ClubNightList />} />
+          <Route path="/nights/:id" element={<ClubNightDetail />} />
           <Route path="/flyers" element={<FlyerList />} />
           <Route path="/master/events" element={<EventList />} />
           <Route path="/master/venues" element={<VenueList />} />

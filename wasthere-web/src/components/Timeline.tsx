@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import type { ClubNight, Event } from '../types';
 import { clubNightsApi, eventsApi, flyersApi } from '../services/api';
 
 export function Timeline() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<number>(0);
   const [clubNights, setClubNights] = useState<ClubNight[]>([]);
@@ -205,7 +206,11 @@ export function Timeline() {
                     <div className="timeline-empty">No events this month</div>
                   ) : (
                     item.clubNights.map((clubNight) => (
-                      <div key={clubNight.id} className="timeline-card">
+                      <div 
+                        key={clubNight.id} 
+                        className="timeline-card timeline-card-clickable"
+                        onClick={() => navigate(`/nights/${clubNight.id}`)}
+                      >
                         {clubNight.flyerThumbnailPath && (
                           <div className="timeline-card-thumbnail">
                             <img

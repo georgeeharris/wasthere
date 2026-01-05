@@ -74,10 +74,15 @@ export function FlyerPreviewModal({ flyerResults, onConfirm, onCancel }: FlyerPr
     }
     
     if (clubNight.month && clubNight.day) {
+      // Validate month is in valid range
+      if (clubNight.month < 1 || clubNight.month > 12) {
+        return 'Date unknown';
+      }
+      
       const monthName = MONTH_NAMES[clubNight.month - 1];
       let dateStr = `${clubNight.dayOfWeek || ''} ${clubNight.day} ${monthName}`.trim();
       
-      if (clubNight.candidateYears.length > 0) {
+      if (clubNight.candidateYears && clubNight.candidateYears.length > 0) {
         dateStr += ` (Year: ${clubNight.candidateYears.join(' or ')})`;
       }
       

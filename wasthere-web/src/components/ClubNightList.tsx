@@ -220,6 +220,18 @@ export function ClubNightList() {
         </form>
       )}
 
+      <div className="sort-control" style={{ marginBottom: '1rem' }}>
+        <label>Sort by date:</label>
+        <select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+          className="input"
+        >
+          <option value="desc">Newest first</option>
+          <option value="asc">Oldest first</option>
+        </select>
+      </div>
+
       <div className="filter-sort-controls">
         <button 
           className="btn btn-small"
@@ -227,18 +239,6 @@ export function ClubNightList() {
         >
           {showFilters ? '▼' : '▶'} Filters
         </button>
-        
-        <div className="sort-control">
-          <label>Sort by date:</label>
-          <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-            className="input"
-          >
-            <option value="desc">Newest first</option>
-            <option value="asc">Oldest first</option>
-          </select>
-        </div>
       </div>
 
       {showFilters && (

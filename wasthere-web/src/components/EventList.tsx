@@ -3,10 +3,8 @@ import type { Event } from '../types';
 import { eventsApi } from '../services/api';
 import { usePagination } from '../hooks/usePagination';
 import { Pagination } from './Pagination';
-import { useNavigate } from 'react-router-dom';
 
 export function EventList() {
-  const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [newEventName, setNewEventName] = useState('');
@@ -107,20 +105,7 @@ export function EventList() {
 
   return (
     <div className="card">
-      <div className="card-header">
-        <h2>Events</h2>
-        <div className="master-list-nav">
-          <button onClick={() => navigate('/master/events')} className="btn btn-small active">
-            Events
-          </button>
-          <button onClick={() => navigate('/master/venues')} className="btn btn-small">
-            Venues
-          </button>
-          <button onClick={() => navigate('/master/acts')} className="btn btn-small">
-            Acts
-          </button>
-        </div>
-      </div>
+      <h2>Events</h2>
 
       <div className="search-box">
         <input

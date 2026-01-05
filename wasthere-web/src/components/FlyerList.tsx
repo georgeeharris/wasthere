@@ -1,29 +1,13 @@
 import { useState, useEffect } from 'react';
-import type { Flyer, DiagnosticInfo, FlyerAnalysisResult, Event, Venue } from '../types';
-import { flyersApi, eventsApi, venuesApi, type AutoPopulateResult, type YearSelection, type FlyerUploadResult } from '../services/api';
-import { ErrorDiagnostics } from './ErrorDiagnostics';
-import { YearSelectionModal } from './YearSelectionModal';
-import { EventSelectionModal } from './EventSelectionModal';
-import { FlyerPreviewModal } from './FlyerPreviewModal';
+import type { Flyer, Event, Venue } from '../types';
+import { flyersApi, eventsApi, venuesApi, type AutoPopulateResult } from '../services/api';
 import { usePagination } from '../hooks/usePagination';
 import { Pagination } from './Pagination';
 
 export function FlyerList() {
   const [flyers, setFlyers] = useState<Flyer[]>([]);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [diagnostics, setDiagnostics] = useState<DiagnosticInfo | undefined>(undefined);
   const [autoPopulating, setAutoPopulating] = useState<number | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [showPreview, setShowPreview] = useState(false);
-  const [pendingFlyerResults, setPendingFlyerResults] = useState<FlyerUploadResult[]>([]);
-  const [showEventSelection, setShowEventSelection] = useState(false);
-  const [showYearSelection, setShowYearSelection] = useState(false);
-  const [pendingAnalysis, setPendingAnalysis] = useState<{ flyerId: number; analysisResult: FlyerAnalysisResult; needsEventSelection: boolean } | null>(null);
-  const [currentFlyerIndex, setCurrentFlyerIndex] = useState<number>(0);
-  const [flyerEventSelections, setFlyerEventSelections] = useState<Map<number, number>>(new Map());
-  const [flyerYearSelections, setFlyerYearSelections] = useState<Map<number, Map<string, number>>>(new Map());
+  const [error, setError] = useState<string | null>(null);
 
   // Filter and sort state
   const [showFilters, setShowFilters] = useState(false);
@@ -89,385 +73,6 @@ export function FlyerList() {
     }
   };
 
-  const getFlyersNeedingUserInput = (flyerResults: FlyerUploadResult[]) => {
-    return flyerResults.filter(fr => 
-      fr.success && (fr.needsEventSelection || 
-        (fr.analysisResult?.clubNights.some(cn => cn.candidateYears.length > 0) ?? false))
-    );
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-      setError(null);
-      setDiagnostics(undefined);
-    }
-  };
-
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!selectedFile) {
-      setError('Please select a file');
-      return;
-    }
-
-    setUploading(true);
-    setError(null);
-    setDiagnostics(undefined);
-    setSuccessMessage(null);
-
-    try {
-      const result = await flyersApi.upload(selectedFile);
-      
-      if (!result.success) {
-        setError(result.message || 'Failed to upload and process flyer(s)');
-        setUploading(false);
-        return;
-      }
-
-      // Process results for each flyer
-      const totalFlyers = result.totalFlyers;
-      const flyerResults = result.flyerResults;
-
-      console.log(`Upload complete. Processed ${totalFlyers} flyer(s)`);
-
-      // Filter to only successful flyers with analysis results
-      const successfulFlyers = flyerResults.filter(r => r.success && r.analysisResult);
-
-      if (successfulFlyers.length > 0) {
-        // Show preview modal for all successfully analyzed flyers
-        setPendingFlyerResults(successfulFlyers);
-        setShowPreview(true);
-        // Keep uploading state false during preview
-        setUploading(false);
-      } else {
-        // No flyers to preview
-        setSuccessMessage(result.message);
-        await loadFlyers();
-        setTimeout(() => setSuccessMessage(null), 5000);
-        setUploading(false);
-      }
-      
-      // Reset form
-      setSelectedFile(null);
-      const fileInput = document.getElementById('flyer-file') as HTMLInputElement;
-      if (fileInput) fileInput.value = '';
-      
-    } catch (error) {
-      console.error('Failed to upload flyer:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to upload flyer';
-      setError(errorMessage);
-      setDiagnostics(undefined);
-      setUploading(false);
-    }
-  };
-
-  const handlePreviewConfirm = () => {
-    // Close preview and proceed to event/year selection flow
-    setShowPreview(false);
-    
-    // Check if any flyers need user input
-    const flyersNeedingInput = getFlyersNeedingUserInput(pendingFlyerResults);
-
-    if (flyersNeedingInput.length > 0) {
-      // Start wizard flow for flyers needing input
-      const firstFlyerNeedingInput = flyersNeedingInput[0];
-      
-      setPendingAnalysis({
-        flyerId: firstFlyerNeedingInput.flyer!.id,
-        analysisResult: firstFlyerNeedingInput.analysisResult!,
-        needsEventSelection: firstFlyerNeedingInput.needsEventSelection ?? false
-      });
-      
-      setCurrentFlyerIndex(0);
-      setFlyerEventSelections(new Map());
-      setFlyerYearSelections(new Map());
-
-      if (firstFlyerNeedingInput.needsEventSelection) {
-        setShowEventSelection(true);
-        setSuccessMessage(firstFlyerNeedingInput.message);
-      } else {
-        const needsYearSelection = firstFlyerNeedingInput.analysisResult?.clubNights.some(
-          (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 0
-        );
-        if (needsYearSelection) {
-          setShowYearSelection(true);
-          setSuccessMessage(firstFlyerNeedingInput.message);
-        }
-      }
-    } else {
-      // All flyers processed successfully without needing input
-      // Reload flyers to show the newly created club nights
-      setSuccessMessage('Flyers uploaded successfully!');
-      loadFlyers().then(() => {
-        setTimeout(() => setSuccessMessage(null), 5000);
-      });
-    }
-    
-    setPendingFlyerResults([]);
-  };
-
-  const handlePreviewCancel = async () => {
-    // User cancelled, delete the uploaded flyers
-    setShowPreview(false);
-    
-    try {
-      // Delete all uploaded flyers in parallel
-      // Filter and extract IDs with proper type safety
-      const flyerIds = pendingFlyerResults
-        .map(flyerResult => flyerResult.flyer?.id)
-        .filter((id): id is number => id !== undefined);
-      
-      const deletePromises = flyerIds.map(id => flyersApi.delete(id));
-      
-      const results = await Promise.allSettled(deletePromises);
-      
-      const failedDeletions = results.filter(result => result.status === 'rejected').length;
-      
-      if (failedDeletions > 0) {
-        setError(`Upload cancelled. ${flyerIds.length - failedDeletions} flyer(s) deleted, but ${failedDeletions} failed. Please delete them manually.`);
-      } else {
-        setError('Upload cancelled. Flyers have been deleted.');
-      }
-      
-      setPendingFlyerResults([]);
-    } catch (error) {
-      console.error('Failed to delete flyers:', error);
-      setError('Upload cancelled, but failed to delete some flyers. Please delete them manually.');
-    }
-  };
-
-  const completeUploadWithYears = async (flyerId: number, analysisResult: FlyerAnalysisResult, selectedYearsMap?: Map<string, number>, eventId?: number) => {
-    try {
-      // Build the year selections array
-      const selectedYears: YearSelection[] = [];
-      
-      for (const cn of analysisResult.clubNights) {
-        if (!cn.date && cn.month && cn.day) {
-          const key = `${cn.month}-${cn.day}`;
-          let year: number;
-          
-          if (selectedYearsMap && selectedYearsMap.has(key)) {
-            year = selectedYearsMap.get(key)!;
-          } else if (cn.candidateYears.length > 0) {
-            // Default to first candidate if not explicitly selected
-            year = cn.candidateYears[0];
-          } else {
-            continue; // Skip if no candidate years
-          }
-          
-          selectedYears.push({
-            month: cn.month,
-            day: cn.day,
-            year: year
-          });
-        }
-      }
-
-      const result = await flyersApi.completeUpload(flyerId, selectedYears, eventId);
-      
-      if (result.success) {
-        setSuccessMessage(`Flyer processed! ${result.message}`);
-        await loadFlyers();
-        setTimeout(() => setSuccessMessage(null), 10000);
-      } else {
-        setError(result.message || 'Failed to process flyer');
-        setDiagnostics(result.diagnostics);
-      }
-    } catch (error) {
-      console.error('Failed to complete upload:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to complete upload';
-      setError(errorMessage);
-    }
-  };
-
-  const processNextFlyer = (
-    flyerId: number,
-    analysisResult: FlyerAnalysisResult,
-    completedIndex: number,
-    eventSelections: Map<number, number>,
-    yearSelections: Map<number, Map<string, number>>
-  ) => {
-    const totalFlyers = analysisResult.flyers?.length || 1;
-    const nextIndex = completedIndex + 1;
-
-    if (nextIndex >= totalFlyers) {
-      // All flyers processed, complete the upload
-      setUploading(true);
-      
-      // Merge all year selections from all flyers into one map
-      const mergedYearSelections = new Map<string, number>();
-      yearSelections.forEach((flyerSelections) => {
-        flyerSelections.forEach((year, key) => {
-          mergedYearSelections.set(key, year);
-        });
-      });
-      
-      // NOTE: Current limitation - we use the first event selection for all club nights
-      // because the Flyer database model only supports one EventId per image upload.
-      // If multiple different events are detected in one image, users should upload them separately.
-      const firstEventId = eventSelections.size > 0 ? Array.from(eventSelections.values())[0] : undefined;
-      
-      completeUploadWithYears(flyerId, analysisResult, mergedYearSelections, firstEventId)
-        .finally(() => {
-          setPendingAnalysis(null);
-          setCurrentFlyerIndex(0);
-          setFlyerEventSelections(new Map());
-          setFlyerYearSelections(new Map());
-          setUploading(false);
-        });
-      return;
-    }
-
-    // Process next flyer
-    setCurrentFlyerIndex(nextIndex);
-    const nextFlyer = analysisResult.flyers[nextIndex];
-    
-    if (!nextFlyer || nextFlyer.clubNights.length === 0) {
-      // Skip this flyer and move to next
-      processNextFlyer(flyerId, analysisResult, nextIndex, eventSelections, yearSelections);
-      return;
-    }
-
-    // Check if next flyer needs event selection
-    const nextEventName = nextFlyer.clubNights[0]?.eventName;
-    const nextNeedsEventSelection = !nextEventName;
-    
-    // Check if next flyer needs year selection
-    const nextNeedsYearSelection = nextFlyer.clubNights.some(
-      (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 1
-    );
-
-    if (nextNeedsEventSelection) {
-      setShowEventSelection(true);
-      setSuccessMessage(`Processing flyer ${nextIndex + 1} of ${totalFlyers}. Please select the event.`);
-    } else if (nextNeedsYearSelection) {
-      setShowYearSelection(true);
-      setSuccessMessage(`Processing flyer ${nextIndex + 1} of ${totalFlyers}. Please select years for the dates.`);
-    } else {
-      // No input needed for this flyer, move to next
-      processNextFlyer(flyerId, analysisResult, nextIndex, eventSelections, yearSelections);
-    }
-  };
-
-  const handleEventSelectionConfirm = (eventId: number) => {
-    if (!pendingAnalysis) return;
-    
-    const totalFlyers = pendingAnalysis.analysisResult.flyers?.length || 1;
-    const currentFlyer = pendingAnalysis.analysisResult.flyers?.[currentFlyerIndex];
-    
-    if (!currentFlyer) return;
-
-    // Store the selected event ID for this flyer
-    const newEventSelections = new Map(flyerEventSelections);
-    newEventSelections.set(currentFlyerIndex, eventId);
-    setFlyerEventSelections(newEventSelections);
-    setShowEventSelection(false);
-    
-    // Check if current flyer needs year selection
-    const needsYearSelection = currentFlyer.clubNights.some(
-      (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 1
-    );
-    
-    if (needsYearSelection) {
-      // Proceed to year selection for current flyer
-      setShowYearSelection(true);
-      if (totalFlyers > 1) {
-        setSuccessMessage(`Event selected for flyer ${currentFlyerIndex + 1} of ${totalFlyers}! Now please select years for the dates.`);
-      } else {
-        setSuccessMessage('Event selected! Now please select years for the dates.');
-      }
-    } else {
-      // No year selection needed for this flyer, move to next or complete
-      if (totalFlyers > 1) {
-        processNextFlyer(pendingAnalysis.flyerId, pendingAnalysis.analysisResult, currentFlyerIndex, newEventSelections, flyerYearSelections);
-      } else {
-        setUploading(true);
-        completeUploadWithYears(pendingAnalysis.flyerId, pendingAnalysis.analysisResult, undefined, eventId)
-          .finally(() => {
-            setPendingAnalysis(null);
-            setCurrentFlyerIndex(0);
-            setFlyerEventSelections(new Map());
-            setFlyerYearSelections(new Map());
-            setUploading(false);
-          });
-      }
-    }
-  };
-
-  const handleEventSelectionCancel = () => {
-    setShowEventSelection(false);
-    setPendingAnalysis(null);
-    setCurrentFlyerIndex(0);
-    setFlyerEventSelections(new Map());
-    setFlyerYearSelections(new Map());
-    setError('Upload cancelled. Please delete the flyer if needed.');
-  };
-
-  const handleYearSelectionConfirm = async (selectedYearsMap: Map<string, number>) => {
-    if (!pendingAnalysis) return;
-    
-    const totalFlyers = pendingAnalysis.analysisResult.flyers?.length || 1;
-    
-    // Store the year selections for this flyer
-    const newYearSelections = new Map(flyerYearSelections);
-    newYearSelections.set(currentFlyerIndex, selectedYearsMap);
-    setFlyerYearSelections(newYearSelections);
-    setShowYearSelection(false);
-    
-    // If there are more flyers to process, continue the wizard
-    if (totalFlyers > 1 && currentFlyerIndex < totalFlyers - 1) {
-      processNextFlyer(
-        pendingAnalysis.flyerId, 
-        pendingAnalysis.analysisResult, 
-        currentFlyerIndex, 
-        flyerEventSelections, 
-        newYearSelections
-      );
-    } else {
-      // All flyers processed or single flyer, complete upload
-      setUploading(true);
-      
-      // Merge all year selections from all flyers
-      const mergedYearSelections = new Map<string, number>();
-      newYearSelections.forEach((flyerSelections) => {
-        flyerSelections.forEach((year, key) => {
-          mergedYearSelections.set(key, year);
-        });
-      });
-      
-      // NOTE: Current limitation - we use the first event selection for all club nights
-      // because the Flyer database model only supports one EventId per image upload.
-      // If multiple different events are detected in one image, users should upload them separately.
-      const firstEventId = flyerEventSelections.size > 0 ? Array.from(flyerEventSelections.values())[0] : undefined;
-      
-      try {
-        await completeUploadWithYears(
-          pendingAnalysis.flyerId, 
-          pendingAnalysis.analysisResult, 
-          mergedYearSelections, 
-          firstEventId || undefined
-        );
-      } finally {
-        setPendingAnalysis(null);
-        setCurrentFlyerIndex(0);
-        setFlyerEventSelections(new Map());
-        setFlyerYearSelections(new Map());
-        setUploading(false);
-      }
-    }
-  };
-
-  const handleYearSelectionCancel = () => {
-    setShowYearSelection(false);
-    setPendingAnalysis(null);
-    setCurrentFlyerIndex(0);
-    setFlyerEventSelections(new Map());
-    setFlyerYearSelections(new Map());
-    setError('Upload cancelled. Please delete the flyer if needed.');
-  };
-
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this flyer?')) return;
 
@@ -483,123 +88,50 @@ export function FlyerList() {
   const handleAutoPopulate = async (id: number) => {
     setAutoPopulating(id);
     setError(null);
-    setDiagnostics(undefined);
-    setSuccessMessage(null);
 
     try {
       const result: AutoPopulateResult = await flyersApi.autoPopulate(id);
       
       if (result.success) {
-        setSuccessMessage(result.message);
-        // Reload flyers to show updated club nights
         await loadFlyers();
-        
-        // Clear success message after 5 seconds
-        setTimeout(() => setSuccessMessage(null), 5000);
       } else {
         setError(result.message || 'Failed to auto-populate from flyer');
-        setDiagnostics(result.diagnostics);
       }
     } catch (error) {
       console.error('Failed to auto-populate:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to auto-populate from flyer';
       setError(errorMessage);
-      setDiagnostics(undefined);
     } finally {
       setAutoPopulating(null);
     }
   };
 
   return (
-    <>
+    <div className="card">
+      <h2>Flyers</h2>
+      
       {error && (
-        <ErrorDiagnostics
-          error={error}
-          diagnostics={diagnostics}
-          onClose={() => {
-            setError(null);
-            setDiagnostics(undefined);
-          }}
-        />
+        <div className="error-message" style={{ color: 'red', marginBottom: '1rem', padding: '1rem', backgroundColor: '#ffebee', borderRadius: '4px' }}>
+          {error}
+          <button 
+            onClick={() => setError(null)} 
+            style={{ marginLeft: '1rem', padding: '0.25rem 0.5rem' }}
+          >
+            Dismiss
+          </button>
+        </div>
       )}
-      
-      {showPreview && pendingFlyerResults.length > 0 && (
-        <FlyerPreviewModal
-          flyerResults={pendingFlyerResults}
-          onConfirm={handlePreviewConfirm}
-          onCancel={handlePreviewCancel}
-        />
-      )}
-      
-      {showEventSelection && pendingAnalysis && (
-        <EventSelectionModal
-          onConfirm={handleEventSelectionConfirm}
-          onCancel={handleEventSelectionCancel}
-          currentFlyerIndex={currentFlyerIndex}
-          totalFlyers={pendingAnalysis.analysisResult.flyers?.length || 1}
-        />
-      )}
-      
-      {showYearSelection && pendingAnalysis && (
-        <YearSelectionModal
-          clubNights={pendingAnalysis.analysisResult.flyers?.[currentFlyerIndex]?.clubNights || pendingAnalysis.analysisResult.clubNights}
-          onConfirm={handleYearSelectionConfirm}
-          onCancel={handleYearSelectionCancel}
-          currentFlyerIndex={currentFlyerIndex}
-          totalFlyers={pendingAnalysis.analysisResult.flyers?.length || 1}
-        />
-      )}
-      
-      <div className="card">
-        <h2>Flyers</h2>
-        
-        <div className="club-night-form">
-          <h3>Upload New Flyer</h3>
-          {successMessage && <div className="success-message" style={{ color: 'green', marginBottom: '1rem' }}>{successMessage}</div>}
-        
-        <form onSubmit={handleUpload}>
-          <div className="form-group">
-            <label htmlFor="flyer-file">Select Image File</label>
-            <input
-              id="flyer-file"
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-              onChange={handleFileChange}
-              className="input"
-            />
-            {selectedFile && (
-              <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
-                Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-              </div>
-            )}
-          </div>
 
-          <div className="form-actions">
-            <button 
-              type="submit" 
-              className={`btn btn-primary ${uploading ? 'btn-loading' : ''}`}
-              disabled={uploading || !selectedFile}
-            >
-              {uploading && <span className="spinner"></span>}
-              Upload and Analyze Flyer
-            </button>
-          </div>
-          
-          {uploading && (
-            <div className="progress-text">
-              Uploading and analyzing flyer... This may take a minute.
-            </div>
-          )}
-          
-          <div style={{ marginTop: '1rem', fontSize: '0.9rem', color: '#666' }}>
-            <p>The flyer will be automatically analyzed to extract:</p>
-            <ul style={{ marginLeft: '1.5rem', marginTop: '0.5rem' }}>
-              <li>Event and venue information</li>
-              <li>Event dates (with automatic year inference)</li>
-              <li>Performing acts/DJs</li>
-            </ul>
-          </div>
-        </form>
+      <div className="sort-control" style={{ marginBottom: '1rem' }}>
+        <label>Sort by date:</label>
+        <select
+          value={sortOrder}
+          onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+          className="input"
+        >
+          <option value="desc">Newest first</option>
+          <option value="asc">Oldest first</option>
+        </select>
       </div>
 
       <div className="filter-sort-controls">
@@ -609,18 +141,6 @@ export function FlyerList() {
         >
           {showFilters ? '▼' : '▶'} Filters
         </button>
-        
-        <div className="sort-control">
-          <label>Sort by date:</label>
-          <select
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
-            className="input"
-          >
-            <option value="desc">Newest first</option>
-            <option value="asc">Oldest first</option>
-          </select>
-        </div>
       </div>
 
       {showFilters && (
@@ -754,6 +274,5 @@ export function FlyerList() {
         />
       )}
     </div>
-    </>
   );
 }

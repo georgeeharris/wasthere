@@ -3,10 +3,8 @@ import type { Venue } from '../types';
 import { venuesApi } from '../services/api';
 import { usePagination } from '../hooks/usePagination';
 import { Pagination } from './Pagination';
-import { useNavigate } from 'react-router-dom';
 
 export function VenueList() {
-  const navigate = useNavigate();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [newVenueName, setNewVenueName] = useState('');
@@ -107,20 +105,7 @@ export function VenueList() {
 
   return (
     <div className="card">
-      <div className="card-header">
-        <h2>Venues</h2>
-        <div className="master-list-nav">
-          <button onClick={() => navigate('/master/events')} className="btn btn-small">
-            Events
-          </button>
-          <button onClick={() => navigate('/master/venues')} className="btn btn-small active">
-            Venues
-          </button>
-          <button onClick={() => navigate('/master/acts')} className="btn btn-small">
-            Acts
-          </button>
-        </div>
-      </div>
+      <h2>Venues</h2>
 
       <div className="search-box">
         <input

@@ -46,7 +46,7 @@ export function Home() {
             </p>
             <button 
               className="btn btn-primary"
-              onClick={() => navigate('/flyers')}
+              onClick={() => navigate('/contribute')}
             >
               Upload Flyer
             </button>

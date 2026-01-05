@@ -1293,3 +1293,131 @@
   }
 }
 
+/* Flyer Preview Modal Styles */
+.preview-modal-content {
+  max-width: 1200px;
+  max-height: 90vh;
+}
+
+.modal-subtitle {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.9rem;
+  color: #666;
+  font-weight: normal;
+}
+
+.preview-navigation {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+}
+
+.preview-counter {
+  font-weight: 600;
+  color: #333;
+}
+
+.club-night-preview {
+  margin-bottom: 1rem;
+}
+
+.club-night-preview-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+
+.club-night-preview-flyer {
+  position: sticky;
+  top: 0;
+}
+
+.club-night-preview-flyer img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.club-night-preview-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-info-card {
+  background: #f9f9f9;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.preview-info-header {
+  margin-bottom: 1.5rem;
+}
+
+.preview-info-header h2 {
+  font-size: 1.8rem;
+  margin: 0 0 0.5rem 0;
+  color: #1a1a1a;
+}
+
+.preview-date {
+  font-size: 1.1rem;
+  color: #555;
+  margin: 0.5rem 0;
+  font-weight: 500;
+}
+
+.preview-venue {
+  font-size: 1rem;
+  color: #666;
+  margin: 0;
+}
+
+.preview-notice {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background-color: #fff3cd;
+  border-left: 4px solid #ffc107;
+  border-radius: 4px;
+}
+
+.preview-notice p {
+  margin: 0;
+  color: #856404;
+  font-size: 0.9rem;
+}
+
+.modal-actions {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* Responsive preview modal */
+@media (max-width: 768px) {
+  .preview-modal-content {
+    max-width: 95vw;
+  }
+
+  .club-night-preview-layout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .club-night-preview-flyer {
+    position: static;
+  }
+
+  .preview-navigation {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+

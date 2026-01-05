@@ -4,6 +4,7 @@ import { flyersApi, eventsApi, venuesApi, type AutoPopulateResult, type YearSele
 import { ErrorDiagnostics } from './ErrorDiagnostics';
 import { YearSelectionModal } from './YearSelectionModal';
 import { EventSelectionModal } from './EventSelectionModal';
+import { FlyerPreviewModal } from './FlyerPreviewModal';
 import { usePagination } from '../hooks/usePagination';
 import { Pagination } from './Pagination';
 
@@ -15,6 +16,8 @@ export function FlyerList() {
   const [diagnostics, setDiagnostics] = useState<DiagnosticInfo | undefined>(undefined);
   const [autoPopulating, setAutoPopulating] = useState<number | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [pendingFlyerResults, setPendingFlyerResults] = useState<FlyerUploadResult[]>([]);
   const [showEventSelection, setShowEventSelection] = useState(false);
   const [showYearSelection, setShowYearSelection] = useState(false);
   const [pendingAnalysis, setPendingAnalysis] = useState<{ flyerId: number; analysisResult: FlyerAnalysisResult; needsEventSelection: boolean } | null>(null);
@@ -129,41 +132,20 @@ export function FlyerList() {
 
       console.log(`Upload complete. Processed ${totalFlyers} flyer(s)`);
 
-      // Check if any flyers need user input
-      const flyersNeedingInput = getFlyersNeedingUserInput(flyerResults);
+      // Filter to only successful flyers with analysis results
+      const successfulFlyers = flyerResults.filter(r => r.success && r.analysisResult);
 
-      if (flyersNeedingInput.length > 0) {
-        // Start wizard flow for flyers needing input
-        // For now, we'll process them sequentially
-        const firstFlyerNeedingInput = flyersNeedingInput[0];
-        
-        setPendingAnalysis({
-          flyerId: firstFlyerNeedingInput.flyer!.id,
-          analysisResult: firstFlyerNeedingInput.analysisResult!,
-          needsEventSelection: firstFlyerNeedingInput.needsEventSelection ?? false
-        });
-        
-        setCurrentFlyerIndex(0);
-        setFlyerEventSelections(new Map());
-        setFlyerYearSelections(new Map());
-
-        if (firstFlyerNeedingInput.needsEventSelection) {
-          setShowEventSelection(true);
-          setSuccessMessage(firstFlyerNeedingInput.message);
-        } else {
-          const needsYearSelection = firstFlyerNeedingInput.analysisResult?.clubNights.some(
-            (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 0
-          );
-          if (needsYearSelection) {
-            setShowYearSelection(true);
-            setSuccessMessage(firstFlyerNeedingInput.message);
-          }
-        }
+      if (successfulFlyers.length > 0) {
+        // Show preview modal for all successfully analyzed flyers
+        setPendingFlyerResults(successfulFlyers);
+        setShowPreview(true);
+        setUploading(false);
       } else {
-        // All flyers processed successfully without needing input
+        // No flyers to preview
         setSuccessMessage(result.message);
         await loadFlyers();
         setTimeout(() => setSuccessMessage(null), 5000);
+        setUploading(false);
       }
       
       // Reset form
@@ -177,7 +159,75 @@ export function FlyerList() {
       setError(errorMessage);
       setDiagnostics(undefined);
     } finally {
-      setUploading(false);
+      // Keep uploading state if showing preview
+      if (!showPreview) {
+        setUploading(false);
+      }
+    }
+  };
+
+  const handlePreviewConfirm = () => {
+    // Close preview and proceed to event/year selection flow
+    setShowPreview(false);
+    
+    // Check if any flyers need user input
+    const flyersNeedingInput = getFlyersNeedingUserInput(pendingFlyerResults);
+
+    if (flyersNeedingInput.length > 0) {
+      // Start wizard flow for flyers needing input
+      const firstFlyerNeedingInput = flyersNeedingInput[0];
+      
+      setPendingAnalysis({
+        flyerId: firstFlyerNeedingInput.flyer!.id,
+        analysisResult: firstFlyerNeedingInput.analysisResult!,
+        needsEventSelection: firstFlyerNeedingInput.needsEventSelection ?? false
+      });
+      
+      setCurrentFlyerIndex(0);
+      setFlyerEventSelections(new Map());
+      setFlyerYearSelections(new Map());
+
+      if (firstFlyerNeedingInput.needsEventSelection) {
+        setShowEventSelection(true);
+        setSuccessMessage(firstFlyerNeedingInput.message);
+      } else {
+        const needsYearSelection = firstFlyerNeedingInput.analysisResult?.clubNights.some(
+          (cn) => !cn.date && cn.month && cn.day && cn.candidateYears.length > 0
+        );
+        if (needsYearSelection) {
+          setShowYearSelection(true);
+          setSuccessMessage(firstFlyerNeedingInput.message);
+        }
+      }
+    } else {
+      // All flyers processed successfully without needing input
+      // Reload flyers to show the newly created club nights
+      setSuccessMessage('Flyers uploaded successfully!');
+      loadFlyers().then(() => {
+        setTimeout(() => setSuccessMessage(null), 5000);
+      });
+    }
+    
+    setPendingFlyerResults([]);
+  };
+
+  const handlePreviewCancel = async () => {
+    // User cancelled, delete the uploaded flyers
+    setShowPreview(false);
+    
+    try {
+      // Delete all uploaded flyers
+      for (const flyerResult of pendingFlyerResults) {
+        if (flyerResult.flyer?.id) {
+          await flyersApi.delete(flyerResult.flyer.id);
+        }
+      }
+      
+      setError('Upload cancelled. Flyers have been deleted.');
+      setPendingFlyerResults([]);
+    } catch (error) {
+      console.error('Failed to delete flyers:', error);
+      setError('Upload cancelled, but failed to delete some flyers. Please delete them manually.');
     }
   };
 
@@ -463,6 +513,14 @@ export function FlyerList() {
             setError(null);
             setDiagnostics(undefined);
           }}
+        />
+      )}
+      
+      {showPreview && pendingFlyerResults.length > 0 && (
+        <FlyerPreviewModal
+          flyerResults={pendingFlyerResults}
+          onConfirm={handlePreviewConfirm}
+          onCancel={handlePreviewCancel}
         />
       )}
       

@@ -139,6 +139,7 @@ export function FlyerList() {
         // Show preview modal for all successfully analyzed flyers
         setPendingFlyerResults(successfulFlyers);
         setShowPreview(true);
+        // Keep uploading state false during preview
         setUploading(false);
       } else {
         // No flyers to preview
@@ -158,11 +159,7 @@ export function FlyerList() {
       const errorMessage = error instanceof Error ? error.message : 'Failed to upload flyer';
       setError(errorMessage);
       setDiagnostics(undefined);
-    } finally {
-      // Keep uploading state if showing preview
-      if (!showPreview) {
-        setUploading(false);
-      }
+      setUploading(false);
     }
   };
 

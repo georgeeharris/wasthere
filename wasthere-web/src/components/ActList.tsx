@@ -3,10 +3,8 @@ import type { Act } from '../types';
 import { actsApi } from '../services/api';
 import { usePagination } from '../hooks/usePagination';
 import { Pagination } from './Pagination';
-import { useNavigate } from 'react-router-dom';
 
 export function ActList() {
-  const navigate = useNavigate();
   const [acts, setActs] = useState<Act[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [newActName, setNewActName] = useState('');
@@ -102,20 +100,7 @@ export function ActList() {
 
   return (
     <div className="card">
-      <div className="card-header">
-        <h2>Acts</h2>
-        <div className="master-list-nav">
-          <button onClick={() => navigate('/master/events')} className="btn btn-small">
-            Events
-          </button>
-          <button onClick={() => navigate('/master/venues')} className="btn btn-small">
-            Venues
-          </button>
-          <button onClick={() => navigate('/master/acts')} className="btn btn-small active">
-            Acts
-          </button>
-        </div>
-      </div>
+      <h2>Acts</h2>
 
       <div className="search-box">
         <input

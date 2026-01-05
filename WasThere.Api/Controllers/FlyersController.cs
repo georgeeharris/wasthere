@@ -429,6 +429,16 @@ public class FlyersController : ControllerBase
             // Check if needs year selection
             var needsYearSelection = analysisResult.ClubNights.Any(cn => cn.CandidateYears.Count > 0);
             
+            // If no user input is needed, automatically create club nights
+            AutoPopulateResult? autoPopulateResult = null;
+            if (!needsEventSelection && !needsYearSelection)
+            {
+                _logger.LogInformation("No user input needed for flyer {FlyerIndex}, automatically creating club nights", flyerIndex);
+                autoPopulateResult = await ProcessAnalysisResult(flyer, analysisResult);
+                _conversionLogger.LogDatabaseOperation(logId, "AUTO_PROCESS", "ClubNights", 
+                    $"Automatically created {autoPopulateResult.ClubNightsCreated} club nights", 0);
+            }
+            
             // Build message
             string message;
             if (needsEventSelection && needsYearSelection)
@@ -445,7 +455,15 @@ public class FlyersController : ControllerBase
             }
             else
             {
-                message = "Flyer analyzed successfully.";
+                // When club nights were auto-created, include the count in the message
+                if (autoPopulateResult != null)
+                {
+                    message = $"Flyer analyzed successfully. {autoPopulateResult.Message}";
+                }
+                else
+                {
+                    message = "Flyer analyzed successfully.";
+                }
             }
             
             if (totalFlyers > 1)
@@ -454,7 +472,7 @@ public class FlyersController : ControllerBase
             }
             
             _conversionLogger.CompleteConversionLog(logId, true, 
-                $"Upload complete. {(needsEventSelection || needsYearSelection ? "Awaiting user input." : "Ready for processing.")}");
+                $"Upload complete. {(needsEventSelection || needsYearSelection ? "Awaiting user input." : "Club nights created automatically.")}");
 
             return new FlyerUploadResult
             {
@@ -465,6 +483,8 @@ public class FlyersController : ControllerBase
                     .Include(f => f.Event)
                     .Include(f => f.Venue)
                     .Include(f => f.ClubNights)
+                        .ThenInclude(cn => cn.ClubNightActs)
+                            .ThenInclude(cna => cna.Act)
                     .FirstOrDefaultAsync(f => f.Id == flyer.Id),
                 AnalysisResult = analysisResult,
                 FlyerIndex = flyerIndex

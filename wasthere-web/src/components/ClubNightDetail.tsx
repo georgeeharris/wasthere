@@ -11,28 +11,28 @@ export function ClubNightDetail() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadClubNight();
+    const loadData = async () => {
+      if (!id) {
+        setError('Invalid club night ID');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await clubNightsApi.getById(parseInt(id, 10));
+        setClubNight(data);
+      } catch (err) {
+        console.error('Failed to load club night:', err);
+        setError('Failed to load club night details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, [id]);
-
-  const loadClubNight = async () => {
-    if (!id) {
-      setError('Invalid club night ID');
-      setLoading(false);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await clubNightsApi.getById(parseInt(id, 10));
-      setClubNight(data);
-    } catch (err) {
-      console.error('Failed to load club night:', err);
-      setError('Failed to load club night details');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

@@ -8,6 +8,7 @@ import { ActList } from './components/ActList';
 import { ClubNightList } from './components/ClubNightList';
 import { ClubNightDetail } from './components/ClubNightDetail';
 import { FlyerList } from './components/FlyerList';
+import { Contribute } from './components/Contribute';
 import { Timeline } from './components/Timeline';
 import { Home } from './components/Home';
 import { setAccessTokenProvider } from './services/api';
@@ -42,7 +43,10 @@ function App() {
     if (location.pathname === '/timeline') return 'timeline';
     if (location.pathname === '/nights') return 'nights';
     if (location.pathname === '/flyers') return 'flyers';
-    if (location.pathname.startsWith('/master')) return 'master';
+    if (location.pathname === '/contribute') return 'contribute';
+    if (location.pathname === '/events') return 'events';
+    if (location.pathname === '/venues') return 'venues';
+    if (location.pathname === '/acts') return 'acts';
     return 'home'; // default
   };
 
@@ -94,10 +98,28 @@ function App() {
             Club Nights
           </button>
           <button
-            className={`tab ${activeTab === 'master' ? 'active' : ''}`}
-            onClick={() => handleNavigation('/master/events')}
+            className={`tab ${activeTab === 'contribute' ? 'active' : ''}`}
+            onClick={() => handleNavigation('/contribute')}
           >
-            Master Lists
+            Contribute
+          </button>
+          <button
+            className={`tab ${activeTab === 'events' ? 'active' : ''}`}
+            onClick={() => handleNavigation('/events')}
+          >
+            Events
+          </button>
+          <button
+            className={`tab ${activeTab === 'venues' ? 'active' : ''}`}
+            onClick={() => handleNavigation('/venues')}
+          >
+            Venues
+          </button>
+          <button
+            className={`tab ${activeTab === 'acts' ? 'active' : ''}`}
+            onClick={() => handleNavigation('/acts')}
+          >
+            Acts
           </button>
           {/* Login link hidden until authentication is working properly */}
           {/* {!isLoading && (
@@ -127,6 +149,11 @@ function App() {
           <Route path="/nights" element={<ClubNightList />} />
           <Route path="/nights/:id" element={<ClubNightDetail />} />
           <Route path="/flyers" element={<FlyerList />} />
+          <Route path="/contribute" element={<Contribute />} />
+          <Route path="/events" element={<EventList />} />
+          <Route path="/venues" element={<VenueList />} />
+          <Route path="/acts" element={<ActList />} />
+          {/* Legacy routes for backwards compatibility */}
           <Route path="/master/events" element={<EventList />} />
           <Route path="/master/venues" element={<VenueList />} />
           <Route path="/master/acts" element={<ActList />} />

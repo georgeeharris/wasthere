@@ -195,9 +195,10 @@ export const flyersApi = {
     return response.json();
   },
   
-  upload: async (file: File): Promise<MultiFlyerUploadResponse> => {
+  upload: async (file: File, skipImageSplitting: boolean = false): Promise<MultiFlyerUploadResponse> => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('skipImageSplitting', skipImageSplitting.toString());
 
     // Create an AbortController with a 5-minute timeout for AI processing
     const controller = new AbortController();

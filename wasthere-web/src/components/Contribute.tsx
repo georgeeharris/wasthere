@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { DiagnosticInfo, FlyerAnalysisResult } from '../types';
 import { flyersApi, type YearSelection, type FlyerUploadResult } from '../services/api';
 import { ErrorDiagnostics } from './ErrorDiagnostics';
@@ -20,6 +20,20 @@ export function Contribute() {
   const [currentFlyerIndex, setCurrentFlyerIndex] = useState<number>(0);
   const [flyerEventSelections, setFlyerEventSelections] = useState<Map<number, number>>(new Map());
   const [flyerYearSelections, setFlyerYearSelections] = useState<Map<number, Map<string, number>>>(new Map());
+  const [uploadingMultipleFlyers, setUploadingMultipleFlyers] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      // Use user agent for device type detection (includes tablets and various mobile browsers)
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(isMobileDevice);
+    };
+    
+    checkMobile();
+    // No need for resize listener since mobile device type doesn't change
+  }, []);
 
   const getFlyersNeedingUserInput = (flyerResults: FlyerUploadResult[]) => {
     return flyerResults.filter(fr => 
@@ -50,7 +64,7 @@ export function Contribute() {
     setSuccessMessage(null);
 
     try {
-      const result = await flyersApi.upload(selectedFile);
+      const result = await flyersApi.upload(selectedFile, !uploadingMultipleFlyers);
       
       if (!result.success) {
         setError(result.message || 'Failed to upload and process flyer(s)');
@@ -78,6 +92,8 @@ export function Contribute() {
       setSelectedFile(null);
       const fileInput = document.getElementById('flyer-file') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
+      const cameraInput = document.getElementById('flyer-camera') as HTMLInputElement;
+      if (cameraInput) cameraInput.value = '';
       
     } catch (error) {
       console.error('Failed to upload flyer:', error);
@@ -446,19 +462,61 @@ export function Contribute() {
           <form onSubmit={handleUpload}>
             <div className="form-group">
               <label htmlFor="flyer-file">Select Image File</label>
-              <input
-                id="flyer-file"
-                type="file"
-                accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                capture="environment"
-                onChange={handleFileChange}
-                className="input"
-              />
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <input
+                  id="flyer-file"
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  onChange={handleFileChange}
+                  className="input"
+                  style={{ flex: isMobile ? '1 1 100%' : '1' }}
+                />
+                {isMobile && (
+                  <label 
+                    htmlFor="flyer-camera"
+                    className="btn btn-secondary"
+                    aria-label="Use camera to take photo"
+                    style={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      padding: '0.5rem 1rem',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    <span aria-hidden="true">📷</span> Use Camera
+                    <input
+                      id="flyer-camera"
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      capture="environment"
+                      onChange={handleFileChange}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
+                )}
+              </div>
               {selectedFile && (
                 <div style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
                   Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
                 </div>
               )}
+            </div>
+
+            <div className="form-group" style={{ marginTop: '1rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={uploadingMultipleFlyers}
+                  onChange={(e) => setUploadingMultipleFlyers(e.target.checked)}
+                  style={{ cursor: 'pointer' }}
+                />
+                <span>Image contains multiple flyers (will attempt to split them automatically)</span>
+              </label>
+              <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666', marginLeft: '1.5rem' }}>
+                <strong>Info:</strong> Check this if your image shows multiple flyers/tickets. Leave unchecked for single flyers to avoid unwanted splitting.
+              </div>
             </div>
 
             <div className="form-actions">

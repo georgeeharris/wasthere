@@ -75,7 +75,7 @@ public class FlyersController : ControllerBase
     }
 
     [HttpPost("upload")]
-    public async Task<ActionResult<MultiFlyerUploadResponse>> UploadFlyer([FromForm] IFormFile file)
+    public async Task<ActionResult<MultiFlyerUploadResponse>> UploadFlyer([FromForm] IFormFile file, [FromForm] bool skipImageSplitting = false)
     {
         // Validate file
         if (file == null || file.Length == 0)
@@ -119,23 +119,41 @@ public class FlyersController : ControllerBase
             return StatusCode(500, "Error saving file to disk.");
         }
 
-        // NEW: Detect if image contains multiple flyers
-        _logger.LogInformation("Detecting flyer bounding boxes in uploaded image");
-        var boundingBoxResult = await _imageSplitterService.DetectFlyerBoundingBoxesAsync(tempFilePath);
-        
-        if (!boundingBoxResult.Success)
+        // NEW: Detect if image contains multiple flyers (skip if user indicates single flyer)
+        int flyerCount = 1;
+        FlyerBoundingBoxResult boundingBoxResult = new FlyerBoundingBoxResult
         {
-            _logger.LogWarning("Failed to detect bounding boxes, proceeding with single flyer assumption");
-            // Fall back to treating as single flyer
-            boundingBoxResult.BoundingBoxes = new List<BoundingBox>
+            Success = true,
+            BoundingBoxes = new List<BoundingBox>
             {
                 new BoundingBox { Index = 0, X = 0, Y = 0, Width = 1, Height = 1 }
-            };
-        }
+            }
+        };
+        
+        if (!skipImageSplitting)
+        {
+            _logger.LogInformation("Detecting flyer bounding boxes in uploaded image");
+            boundingBoxResult = await _imageSplitterService.DetectFlyerBoundingBoxesAsync(tempFilePath);
+            
+            if (!boundingBoxResult.Success)
+            {
+                _logger.LogWarning("Failed to detect bounding boxes, proceeding with single flyer assumption");
+                // Fall back to treating as single flyer
+                boundingBoxResult.BoundingBoxes = new List<BoundingBox>
+                {
+                    new BoundingBox { Index = 0, X = 0, Y = 0, Width = 1, Height = 1 }
+                };
+            }
 
-        var flyerCount = boundingBoxResult.FlyerCount;
-        _logger.LogInformation("Detected {FlyerCount} flyer(s) in the uploaded image", flyerCount);
-        _conversionLogger.LogDatabaseOperation(logId, "DETECT", "Flyers", $"Detected {flyerCount} flyer(s)", 0);
+            flyerCount = boundingBoxResult.FlyerCount;
+            _logger.LogInformation("Detected {FlyerCount} flyer(s) in the uploaded image", flyerCount);
+            _conversionLogger.LogDatabaseOperation(logId, "DETECT", "Flyers", $"Detected {flyerCount} flyer(s)", 0);
+        }
+        else
+        {
+            _logger.LogInformation("Skipping image splitting as requested by user");
+            _conversionLogger.LogDatabaseOperation(logId, "SKIP", "Splitting", "User indicated single flyer upload", 0);
+        }
 
         List<FlyerUploadResult> flyerResults = new();
 

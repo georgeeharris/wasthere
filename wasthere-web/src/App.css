@@ -448,6 +448,15 @@
   background-color: #ee5a52;
 }
 
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #5a6268;
+}
+
 .list {
   list-style: none;
 }

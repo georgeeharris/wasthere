@@ -26,13 +26,13 @@ export function Contribute() {
   // Detect if device is mobile
   useEffect(() => {
     const checkMobile = () => {
-      const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth <= 768;
+      // Use user agent for device type detection (doesn't change on resize)
+      const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       setIsMobile(isMobileDevice);
     };
     
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    // No need for resize listener since mobile device type doesn't change
   }, []);
 
   const getFlyersNeedingUserInput = (flyerResults: FlyerUploadResult[]) => {
@@ -92,6 +92,8 @@ export function Contribute() {
       setSelectedFile(null);
       const fileInput = document.getElementById('flyer-file') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
+      const cameraInput = document.getElementById('flyer-camera') as HTMLInputElement;
+      if (cameraInput) cameraInput.value = '';
       
     } catch (error) {
       console.error('Failed to upload flyer:', error);

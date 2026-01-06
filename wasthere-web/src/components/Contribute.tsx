@@ -26,8 +26,8 @@ export function Contribute() {
   // Detect if device is mobile
   useEffect(() => {
     const checkMobile = () => {
-      // Use user agent for device type detection (doesn't change on resize)
-      const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      // Use user agent for device type detection (includes tablets and various mobile browsers)
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       setIsMobile(isMobileDevice);
     };
     
@@ -475,6 +475,7 @@ export function Contribute() {
                   <label 
                     htmlFor="flyer-camera"
                     className="btn btn-secondary"
+                    aria-label="Use camera to take photo"
                     style={{ 
                       display: 'inline-flex', 
                       alignItems: 'center', 
@@ -484,7 +485,7 @@ export function Contribute() {
                       whiteSpace: 'nowrap'
                     }}
                   >
-                    📷 Use Camera
+                    <span aria-hidden="true">📷</span> Use Camera
                     <input
                       id="flyer-camera"
                       type="file"
@@ -514,7 +515,7 @@ export function Contribute() {
                 <span>Image contains multiple flyers (will attempt to split them automatically)</span>
               </label>
               <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#666', marginLeft: '1.5rem' }}>
-                ℹ️ Check this if your image shows multiple flyers/tickets. Leave unchecked for single flyers to avoid unwanted splitting.
+                <strong>Info:</strong> Check this if your image shows multiple flyers/tickets. Leave unchecked for single flyers to avoid unwanted splitting.
               </div>
             </div>
 

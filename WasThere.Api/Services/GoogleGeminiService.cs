@@ -103,7 +103,7 @@ public class GoogleGeminiService : IGoogleGeminiService
       ""clubNights"": [
         {
           ""eventName"": ""The event name (e.g., 'Fabric', 'Ministry of Sound') or null if unclear"",
-          ""venueName"": ""The venue name"",
+          ""venueName"": ""The venue name ONLY - DO NOT include address details"",
           ""date"": ""The FULL date in ISO format (YYYY-MM-DD) if year is visible, otherwise null"",
           ""dayOfWeek"": ""Day of week if visible (e.g., 'Friday', 'Saturday') - IMPORTANT for date inference"",
           ""month"": numeric month (1-12) if visible,
@@ -134,23 +134,29 @@ Important instructions:
    - DO NOT make up or infer event names
    - DO NOT use generic placeholder names like 'Club Night'
    - When in doubt, set eventName to null - the user will be prompted to select the correct event
-6. Include all performing artists/DJs listed
-7. **CRITICAL**: If a listing combines multiple acts with separators like '&', 'and', 'B2B', 'b2b', 'vs', 'VS', or similar, split them into separate act entries. For example:
+6. **VENUE NAME EXTRACTION - CRITICAL**:
+   - Extract ONLY the venue name itself (e.g., 'Sankey's Soap', 'The Que Club', 'Ministry of Sound')
+   - DO NOT include any address information (street, city, postcode, etc.)
+   - If the flyer shows 'The Que Club, Corporation Street, Birmingham B1 5QS', extract only 'The Que Club'
+   - Remove any trailing address details that may appear after the venue name
+   - Focus on the establishment name only, not its location
+7. Include all performing artists/DJs listed
+8. **CRITICAL**: If a listing combines multiple acts with separators like '&', 'and', 'B2B', 'b2b', 'vs', 'VS', or similar, split them into separate act entries. For example:
    - 'DJ A & DJ B' should become two acts: 'DJ A' and 'DJ B'
    - 'Artist X B2B Artist Y' should become two acts: 'Artist X' and 'Artist Y'
    - 'DJ 1 vs DJ 2' should become two acts: 'DJ 1' and 'DJ 2'
-8. For each act, determine if it's a live set:
+9. For each act, determine if it's a live set:
    - Set isLiveSet to true if the act has indicators like '(live)', '(live set)', '(live PA)', 'live', or similar
    - Set isLiveSet to false if it has '(DJ set)', '(DJ)', or no indicator (default to DJ set)
    - Remove the performance type indicators from the name (e.g., 'Dave Clarke (live)' should be just 'Dave Clarke')
-9. **DATE EXTRACTION**:
+10. **DATE EXTRACTION**:
    - If the full date with year is visible (e.g., '27 May 2003'), provide it in the 'date' field as 'YYYY-MM-DD'
    - If only partial date is visible (e.g., 'Friday 27th May' without year), set 'date' to null and provide:
      * 'dayOfWeek': the day name if visible (very important for inferring year)
      * 'month': the numeric month (1-12)
      * 'day': the numeric day of month (1-31)
-10. Only extract information that is clearly visible in the flyer
-11. Return ONLY valid JSON, no additional text or markdown
+11. Only extract information that is clearly visible in the flyer
+12. Return ONLY valid JSON, no additional text or markdown
 
 Please analyze the flyer and return the JSON:";
 

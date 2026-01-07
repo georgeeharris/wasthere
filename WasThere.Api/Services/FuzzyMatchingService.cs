@@ -18,6 +18,16 @@ public interface IFuzzyMatchingService
 public class FuzzyMatchingService : IFuzzyMatchingService
 {
     private readonly ILogger<FuzzyMatchingService> _logger;
+    
+    // Pre-compiled regex patterns for address detection
+    private static readonly string[] AddressPatterns = new[]
+    {
+        @",\s*\d+\s+[a-z\s]+,\s*[a-z\s]+\s+[a-z0-9\s]+$", // ", 123 Street Name, City Postcode"
+        @",\s*[a-z\s]+,\s*[a-z\s]+\s+[a-z0-9\s]+$", // ", Street Name, City Postcode"
+        @",\s*[a-z\s]+street[a-z\s,]*$", // ", something street..."
+        @",\s*[a-z\s]+road[a-z\s,]*$", // ", something road..."
+        @",\s*[a-z\s]+avenue[a-z\s,]*$", // ", something avenue..."
+    };
 
     public FuzzyMatchingService(ILogger<FuzzyMatchingService> logger)
     {
@@ -111,16 +121,7 @@ public class FuzzyMatchingService : IFuzzyMatchingService
 
         // Remove address-like patterns (e.g., ", corporation Street, Birmingham B1 5QS")
         // Match patterns starting with comma followed by potential address components
-        var addressPatterns = new[]
-        {
-            @",\s*\d+\s+[a-z\s]+,\s*[a-z\s]+\s+[a-z0-9\s]+$", // ", 123 Street Name, City Postcode"
-            @",\s*[a-z\s]+,\s*[a-z\s]+\s+[a-z0-9\s]+$", // ", Street Name, City Postcode"
-            @",\s*[a-z\s]+street[a-z\s,]*$", // ", something street..."
-            @",\s*[a-z\s]+road[a-z\s,]*$", // ", something road..."
-            @",\s*[a-z\s]+avenue[a-z\s,]*$", // ", something avenue..."
-        };
-
-        foreach (var pattern in addressPatterns)
+        foreach (var pattern in AddressPatterns)
         {
             normalized = System.Text.RegularExpressions.Regex.Replace(
                 normalized, 

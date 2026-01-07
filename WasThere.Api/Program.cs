@@ -59,6 +59,9 @@ builder.Services.AddScoped<IFlyerConversionLogger, FlyerConversionLogger>();
 // Add ImageSplitterService
 builder.Services.AddSingleton<IImageSplitterService, ImageSplitterService>();
 
+// Add FuzzyMatchingService
+builder.Services.AddSingleton<IFuzzyMatchingService, FuzzyMatchingService>();
+
 // Add DbContext - Use PostgreSQL if connection string is provided, otherwise use in-memory database
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (!string.IsNullOrEmpty(connectionString))

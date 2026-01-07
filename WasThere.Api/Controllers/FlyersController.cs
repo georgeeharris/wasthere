@@ -20,6 +20,7 @@ public class FlyersController : ControllerBase
     private readonly IDateYearInferenceService _yearInferenceService;
     private readonly IFlyerConversionLogger _conversionLogger;
     private readonly IImageSplitterService _imageSplitterService;
+    private readonly IFuzzyMatchingService _fuzzyMatchingService;
     private const long MaxFileSize = 20 * 1024 * 1024; // 20MB
     private const string UploadsFolder = "uploads";
     private const int ThumbnailWidth = 300;
@@ -36,7 +37,8 @@ public class FlyersController : ControllerBase
         IGoogleGeminiService geminiService,
         IDateYearInferenceService yearInferenceService,
         IFlyerConversionLogger conversionLogger,
-        IImageSplitterService imageSplitterService)
+        IImageSplitterService imageSplitterService,
+        IFuzzyMatchingService fuzzyMatchingService)
     {
         _context = context;
         _environment = environment;
@@ -45,6 +47,7 @@ public class FlyersController : ControllerBase
         _yearInferenceService = yearInferenceService;
         _conversionLogger = conversionLogger;
         _imageSplitterService = imageSplitterService;
+        _fuzzyMatchingService = fuzzyMatchingService;
     }
 
     [HttpGet]
@@ -325,7 +328,7 @@ public class FlyersController : ControllerBase
             var eventName = firstClubNight.EventName?.Trim();
             var needsEventSelection = string.IsNullOrEmpty(eventName);
             
-            // Create a placeholder event if event name is missing
+            // Create a placeholder event if event name is missing, or use fuzzy matching to find existing event
             Event eventEntity;
             if (needsEventSelection)
             {
@@ -341,17 +344,11 @@ public class FlyersController : ControllerBase
             }
             else
             {
-                var existingEvent = await _context.Events
-                    .FirstOrDefaultAsync(e => e.Name.ToLower() == eventName!.ToLower());
-                eventEntity = existingEvent ?? new Event { Name = eventName! };
-                if (existingEvent == null)
-                {
-                    _context.Events.Add(eventEntity);
-                    await _context.SaveChangesAsync();
-                }
+                // Use fuzzy matching to find or create event
+                eventEntity = await FindOrCreateEventAsync(eventName);
             }
 
-            // Find or create Venue
+            // Find or create Venue with fuzzy matching
             var venueName = firstClubNight.VenueName?.Trim();
             Venue? venueEntity = null;
             
@@ -369,14 +366,8 @@ public class FlyersController : ControllerBase
             }
             else
             {
-                var existingVenue = await _context.Venues
-                    .FirstOrDefaultAsync(v => v.Name.ToLower() == venueName!.ToLower());
-                venueEntity = existingVenue ?? new Venue { Name = venueName! };
-                if (existingVenue == null)
-                {
-                    _context.Venues.Add(venueEntity);
-                    await _context.SaveChangesAsync();
-                }
+                // Use fuzzy matching to find or create venue
+                venueEntity = await FindOrCreateVenueAsync(venueName);
             }
 
             // Determine earliest date
@@ -721,14 +712,10 @@ public class FlyersController : ControllerBase
                     continue;
                 }
 
-                var existingEvent = await _context.Events
-                    .FirstOrDefaultAsync(e => e.Name.ToLower() == eventName.ToLower());
-                
-                var eventEntity = existingEvent ?? new Event { Name = eventName };
-                if (existingEvent == null)
+                // Find or create Event with fuzzy matching
+                var eventEntity = await FindOrCreateEventAsync(eventName);
+                if (_context.Entry(eventEntity).State == EntityState.Added)
                 {
-                    _context.Events.Add(eventEntity);
-                    await _context.SaveChangesAsync();
                     result.EventsCreated++;
                 }
 
@@ -738,14 +725,10 @@ public class FlyersController : ControllerBase
                 
                 if (!string.IsNullOrEmpty(venueName))
                 {
-                    var existingVenue = await _context.Venues
-                        .FirstOrDefaultAsync(v => v.Name.ToLower() == venueName.ToLower());
-                    
-                    venueEntity = existingVenue ?? new Venue { Name = venueName };
-                    if (existingVenue == null)
+                    // Use fuzzy matching to find or create venue
+                    venueEntity = await FindOrCreateVenueAsync(venueName);
+                    if (_context.Entry(venueEntity).State == EntityState.Added)
                     {
-                        _context.Venues.Add(venueEntity);
-                        await _context.SaveChangesAsync();
                         result.VenuesCreated++;
                     }
                 }
@@ -793,15 +776,10 @@ public class FlyersController : ControllerBase
                                 continue;
                             }
 
-                            // Find or create Act
-                            var existingAct = await _context.Acts
-                                .FirstOrDefaultAsync(a => a.Name.ToLower() == trimmedActName.ToLower());
-                            
-                            var actEntity = existingAct ?? new Act { Name = trimmedActName };
-                            if (existingAct == null)
+                            // Find or create Act with fuzzy matching
+                            var actEntity = await FindOrCreateActAsync(trimmedActName);
+                            if (_context.Entry(actEntity).State == EntityState.Added)
                             {
-                                _context.Acts.Add(actEntity);
-                                await _context.SaveChangesAsync();
                                 result.ActsCreated++;
                             }
 
@@ -887,14 +865,10 @@ public class FlyersController : ControllerBase
                     continue;
                 }
 
-                var existingEvent = await _context.Events
-                    .FirstOrDefaultAsync(e => e.Name.ToLower() == eventName.ToLower());
-                
-                var eventEntity = existingEvent ?? new Event { Name = eventName };
-                if (existingEvent == null)
+                // Find or create Event with fuzzy matching
+                var eventEntity = await FindOrCreateEventAsync(eventName);
+                if (_context.Entry(eventEntity).State == EntityState.Added)
                 {
-                    _context.Events.Add(eventEntity);
-                    await _context.SaveChangesAsync();
                     result.EventsCreated++;
                 }
 
@@ -910,15 +884,10 @@ public class FlyersController : ControllerBase
                 }
                 else
                 {
-                    // Use detected venue name
-                    var existingVenue = await _context.Venues
-                        .FirstOrDefaultAsync(v => v.Name.ToLower() == venueName!.ToLower());
-                    
-                    venueEntity = existingVenue ?? new Venue { Name = venueName! };
-                    if (existingVenue == null)
+                    // Use fuzzy matching to find or create venue
+                    venueEntity = await FindOrCreateVenueAsync(venueName);
+                    if (_context.Entry(venueEntity).State == EntityState.Added)
                     {
-                        _context.Venues.Add(venueEntity);
-                        await _context.SaveChangesAsync();
                         result.VenuesCreated++;
                     }
                 }
@@ -961,15 +930,10 @@ public class FlyersController : ControllerBase
                                 continue;
                             }
 
-                            // Find or create Act
-                            var existingAct = await _context.Acts
-                                .FirstOrDefaultAsync(a => a.Name.ToLower() == trimmedActName.ToLower());
-                            
-                            var actEntity = existingAct ?? new Act { Name = trimmedActName };
-                            if (existingAct == null)
+                            // Find or create Act with fuzzy matching
+                            var actEntity = await FindOrCreateActAsync(trimmedActName);
+                            if (_context.Entry(actEntity).State == EntityState.Added)
                             {
-                                _context.Acts.Add(actEntity);
-                                await _context.SaveChangesAsync();
                                 result.ActsCreated++;
                             }
 
@@ -1026,14 +990,10 @@ public class FlyersController : ControllerBase
                     continue;
                 }
 
-                var existingEvent = await _context.Events
-                    .FirstOrDefaultAsync(e => e.Name.ToLower() == eventName.ToLower());
-                
-                var eventEntity = existingEvent ?? new Event { Name = eventName };
-                if (existingEvent == null)
+                // Find or create Event with fuzzy matching
+                var eventEntity = await FindOrCreateEventAsync(eventName);
+                if (_context.Entry(eventEntity).State == EntityState.Added)
                 {
-                    _context.Events.Add(eventEntity);
-                    await _context.SaveChangesAsync();
                     result.EventsCreated++;
                     _conversionLogger.LogDatabaseOperation(logId, "CREATE", "Event", eventName, eventEntity.Id);
                 }
@@ -1050,15 +1010,10 @@ public class FlyersController : ControllerBase
                 }
                 else
                 {
-                    // Use detected venue name
-                    var existingVenue = await _context.Venues
-                        .FirstOrDefaultAsync(v => v.Name.ToLower() == venueName!.ToLower());
-                    
-                    venueEntity = existingVenue ?? new Venue { Name = venueName! };
-                    if (existingVenue == null)
+                    // Use fuzzy matching to find or create venue
+                    venueEntity = await FindOrCreateVenueAsync(venueName);
+                    if (_context.Entry(venueEntity).State == EntityState.Added)
                     {
-                        _context.Venues.Add(venueEntity);
-                        await _context.SaveChangesAsync();
                         result.VenuesCreated++;
                         _conversionLogger.LogDatabaseOperation(logId, "CREATE", "Venue", venueName!, venueEntity.Id);
                     }
@@ -1132,18 +1087,13 @@ public class FlyersController : ControllerBase
                                 continue;
                             }
 
-                            // Find or create Act
-                            var existingAct = await _context.Acts
-                                .FirstOrDefaultAsync(a => a.Name.ToLower() == trimmedActName.ToLower());
-                            
-                            var actEntity = existingAct ?? new Act { Name = trimmedActName };
-                            if (existingAct == null)
+                            // Find or create Act with fuzzy matching
+                            var actEntity = await FindOrCreateActAsync(trimmedActName);
+                            if (_context.Entry(actEntity).State == EntityState.Added)
                             {
-                                _context.Acts.Add(actEntity);
-                                await _context.SaveChangesAsync();
                                 result.ActsCreated++;
-                            }
                                 _conversionLogger.LogDatabaseOperation(logId, "CREATE", "Act", trimmedActName, actEntity.Id);
+                            }
 
                             // Link act to club night
                             var clubNightAct = new ClubNightAct
@@ -1195,6 +1145,144 @@ public class FlyersController : ControllerBase
         
         return UncertainVenueIndicators.Any(indicator => 
             venueName.Contains(indicator, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Finds or creates an event, using fuzzy matching to prefer existing entries.
+    /// This helps maintain data consistency by avoiding duplicate events with minor name variations.
+    /// </summary>
+    private async Task<Event> FindOrCreateEventAsync(string? eventName)
+    {
+        if (string.IsNullOrWhiteSpace(eventName))
+        {
+            throw new ArgumentException("Event name cannot be null or empty", nameof(eventName));
+        }
+
+        var trimmedName = eventName.Trim();
+
+        // First, try exact case-insensitive match
+        var exactMatch = await _context.Events
+            .FirstOrDefaultAsync(e => e.Name.ToLower() == trimmedName.ToLower());
+
+        if (exactMatch != null)
+        {
+            _logger.LogDebug("Found exact event match for '{EventName}': '{MatchName}'", 
+                trimmedName, exactMatch.Name);
+            return exactMatch;
+        }
+
+        // If no exact match, try fuzzy matching against all existing events
+        var allEvents = await _context.Events.Select(e => e.Name).ToListAsync();
+        var fuzzyMatch = _fuzzyMatchingService.FindBestMatch(trimmedName, allEvents, minSimilarity: 0.8);
+
+        if (fuzzyMatch != null)
+        {
+            var matchedEvent = await _context.Events
+                .FirstAsync(e => e.Name == fuzzyMatch);
+            
+            _logger.LogInformation("Using fuzzy matched event '{MatchName}' for input '{InputName}'",
+                matchedEvent.Name, trimmedName);
+            return matchedEvent;
+        }
+
+        // No match found, create new event with the AI-provided name
+        _logger.LogInformation("Creating new event '{EventName}' (no fuzzy match found)", trimmedName);
+        var newEvent = new Event { Name = trimmedName };
+        _context.Events.Add(newEvent);
+        await _context.SaveChangesAsync();
+        return newEvent;
+    }
+
+    /// <summary>
+    /// Finds or creates a venue, using fuzzy matching to prefer existing entries.
+    /// This helps maintain data consistency by avoiding duplicate venues with minor name variations.
+    /// </summary>
+    private async Task<Venue> FindOrCreateVenueAsync(string? venueName)
+    {
+        if (string.IsNullOrWhiteSpace(venueName))
+        {
+            throw new ArgumentException("Venue name cannot be null or empty", nameof(venueName));
+        }
+
+        var trimmedName = venueName.Trim();
+
+        // First, try exact case-insensitive match
+        var exactMatch = await _context.Venues
+            .FirstOrDefaultAsync(v => v.Name.ToLower() == trimmedName.ToLower());
+
+        if (exactMatch != null)
+        {
+            _logger.LogDebug("Found exact venue match for '{VenueName}': '{MatchName}'", 
+                trimmedName, exactMatch.Name);
+            return exactMatch;
+        }
+
+        // If no exact match, try fuzzy matching against all existing venues
+        var allVenues = await _context.Venues.Select(v => v.Name).ToListAsync();
+        var fuzzyMatch = _fuzzyMatchingService.FindBestMatch(trimmedName, allVenues, minSimilarity: 0.8);
+
+        if (fuzzyMatch != null)
+        {
+            var matchedVenue = await _context.Venues
+                .FirstAsync(v => v.Name == fuzzyMatch);
+            
+            _logger.LogInformation("Using fuzzy matched venue '{MatchName}' for input '{InputName}'",
+                matchedVenue.Name, trimmedName);
+            return matchedVenue;
+        }
+
+        // No match found, create new venue with the AI-provided name
+        _logger.LogInformation("Creating new venue '{VenueName}' (no fuzzy match found)", trimmedName);
+        var newVenue = new Venue { Name = trimmedName };
+        _context.Venues.Add(newVenue);
+        await _context.SaveChangesAsync();
+        return newVenue;
+    }
+
+    /// <summary>
+    /// Finds or creates an act, using fuzzy matching to prefer existing entries.
+    /// This helps maintain data consistency by avoiding duplicate acts with minor name variations.
+    /// </summary>
+    private async Task<Act> FindOrCreateActAsync(string? actName)
+    {
+        if (string.IsNullOrWhiteSpace(actName))
+        {
+            throw new ArgumentException("Act name cannot be null or empty", nameof(actName));
+        }
+
+        var trimmedName = actName.Trim();
+
+        // First, try exact case-insensitive match
+        var exactMatch = await _context.Acts
+            .FirstOrDefaultAsync(a => a.Name.ToLower() == trimmedName.ToLower());
+
+        if (exactMatch != null)
+        {
+            _logger.LogDebug("Found exact act match for '{ActName}': '{MatchName}'", 
+                trimmedName, exactMatch.Name);
+            return exactMatch;
+        }
+
+        // If no exact match, try fuzzy matching against all existing acts
+        var allActs = await _context.Acts.Select(a => a.Name).ToListAsync();
+        var fuzzyMatch = _fuzzyMatchingService.FindBestMatch(trimmedName, allActs, minSimilarity: 0.85);
+
+        if (fuzzyMatch != null)
+        {
+            var matchedAct = await _context.Acts
+                .FirstAsync(a => a.Name == fuzzyMatch);
+            
+            _logger.LogInformation("Using fuzzy matched act '{MatchName}' for input '{InputName}'",
+                matchedAct.Name, trimmedName);
+            return matchedAct;
+        }
+
+        // No match found, create new act with the AI-provided name
+        _logger.LogInformation("Creating new act '{ActName}' (no fuzzy match found)", trimmedName);
+        var newAct = new Act { Name = trimmedName };
+        _context.Acts.Add(newAct);
+        await _context.SaveChangesAsync();
+        return newAct;
     }
 
     private void GenerateThumbnail(string sourcePath, string thumbnailPath, int width, int height)

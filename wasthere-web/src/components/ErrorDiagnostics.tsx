@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { DiagnosticInfo } from '../types';
+import { flyersApi } from '../services/api';
 
 interface ErrorDiagnosticsProps {
   error: string;
@@ -12,6 +13,7 @@ const COPY_SUCCESS_DURATION_MS = 3000;
 export function ErrorDiagnostics({ error, diagnostics, onClose }: ErrorDiagnosticsProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const formatDiagnostics = useCallback(() => {
     if (!diagnostics) {
@@ -80,6 +82,31 @@ export function ErrorDiagnostics({ error, diagnostics, onClose }: ErrorDiagnosti
     }
   };
 
+  const downloadLog = async () => {
+    if (!diagnostics?.logId) {
+      console.error('No log ID available for download');
+      return;
+    }
+
+    setDownloading(true);
+    try {
+      const blob = await flyersApi.downloadDiagnosticLog(diagnostics.logId);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `flyer-diagnostic-${diagnostics.logId}.log`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Failed to download log:', err);
+      alert('Failed to download diagnostic log. Please try again or contact support.');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content error-diagnostics" onClick={(e) => e.stopPropagation()}>
@@ -109,6 +136,15 @@ export function ErrorDiagnostics({ error, diagnostics, onClose }: ErrorDiagnosti
                 >
                   {copied ? '✓ Copied!' : '📋 Copy Diagnostics'}
                 </button>
+                {diagnostics.logId && (
+                  <button 
+                    onClick={downloadLog}
+                    className="btn btn-small btn-primary"
+                    disabled={downloading}
+                  >
+                    {downloading ? '⏳ Downloading...' : '📥 Download Full Log'}
+                  </button>
+                )}
               </div>
 
               {showDetails && (
@@ -176,6 +212,7 @@ export function ErrorDiagnostics({ error, diagnostics, onClose }: ErrorDiagnosti
             <p><strong>What to do next:</strong></p>
             <ul>
               {diagnostics && <li>Click "Copy Diagnostics" above to copy detailed error information</li>}
+              {diagnostics?.logId && <li>Click "Download Full Log" to download the complete diagnostic log file</li>}
               <li>Share the diagnostics with support or development team</li>
               <li>Try uploading a different image</li>
               <li>Check your network connection</li>

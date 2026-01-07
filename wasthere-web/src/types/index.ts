@@ -67,6 +67,7 @@ export interface DiagnosticStep {
 }
 
 export interface DiagnosticInfo {
+  logId?: string | null;
   steps: DiagnosticStep[];
   metadata: Record<string, string>;
   errorMessage?: string | null;

@@ -278,6 +278,12 @@ public class FlyersController : ControllerBase
             // Analyze the flyer
             var analysisResult = await _geminiService.AnalyzeFlyerImageAsync(imagePath);
             
+            // Set LogId in diagnostics for client download
+            if (analysisResult.Diagnostics != null)
+            {
+                analysisResult.Diagnostics.LogId = logId;
+            }
+            
             // Log Gemini request and response
             if (!string.IsNullOrEmpty(analysisResult.GeminiPrompt))
             {
@@ -533,6 +539,12 @@ public class FlyersController : ControllerBase
         // Re-analyze the flyer to get the club nights data
         var analysisResult = await _geminiService.AnalyzeFlyerImageAsync(imagePath);
         
+        // Set LogId in diagnostics for client download
+        if (analysisResult.Diagnostics != null)
+        {
+            analysisResult.Diagnostics.LogId = logId;
+        }
+        
         // Log Gemini request and response
         if (!string.IsNullOrEmpty(analysisResult.GeminiPrompt))
         {
@@ -661,6 +673,39 @@ public class FlyersController : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    [HttpGet("diagnostic-log/{logId}")]
+    public IActionResult DownloadDiagnosticLog(string logId)
+    {
+        // Validate logId format to prevent path traversal attacks
+        if (string.IsNullOrWhiteSpace(logId) || 
+            logId.Contains("..") || 
+            logId.Contains("/") || 
+            logId.Contains("\\"))
+        {
+            return BadRequest("Invalid log ID format");
+        }
+
+        var logFilePath = _conversionLogger.GetLogFilePath(logId);
+        
+        if (logFilePath == null || !System.IO.File.Exists(logFilePath))
+        {
+            return NotFound("Diagnostic log file not found");
+        }
+
+        try
+        {
+            var fileBytes = System.IO.File.ReadAllBytes(logFilePath);
+            var fileName = $"flyer-diagnostic-{logId}.log";
+            
+            return File(fileBytes, "text/plain", fileName);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error reading diagnostic log file for log ID: {LogId}", logId);
+            return StatusCode(500, "Error reading diagnostic log file");
+        }
     }
 
     [HttpPost("{id}/auto-populate")]

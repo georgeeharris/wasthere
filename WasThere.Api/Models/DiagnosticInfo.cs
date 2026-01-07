@@ -2,6 +2,7 @@ namespace WasThere.Api.Models;
 
 public class DiagnosticInfo
 {
+    public string? LogId { get; set; }
     public List<DiagnosticStep> Steps { get; set; } = new();
     public Dictionary<string, string> Metadata { get; set; } = new();
     public string? ErrorMessage { get; set; }

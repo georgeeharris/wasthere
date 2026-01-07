@@ -294,6 +294,16 @@ export const flyersApi = {
       throw error;
     }
   },
+
+  downloadDiagnosticLog: async (logId: string): Promise<Blob> => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/flyers/diagnostic-log/${logId}`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to download diagnostic log');
+    }
+    
+    return response.blob();
+  },
 };
 
 export interface FlyerUploadResponse {

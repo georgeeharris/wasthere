@@ -54,6 +54,15 @@ public class FlyerConversionLogger : IFlyerConversionLogger
         return logId;
     }
 
+    public string? GetLogFilePath(string logId)
+    {
+        var logFileName = $"flyer-conversion-{logId}.log";
+        var logsPath = Path.Combine(_environment.ContentRootPath, LogsFolder);
+        var logFilePath = Path.Combine(logsPath, logFileName);
+        
+        return System.IO.File.Exists(logFilePath) ? logFilePath : null;
+    }
+
     public void LogGeminiRequest(string logId, string prompt, string imagePath, long imageSizeBytes, string mimeType)
     {
         lock (_lock)

@@ -689,7 +689,7 @@ public class FlyersController : ControllerBase
 
         var logFilePath = _conversionLogger.GetLogFilePath(logId);
         
-        if (logFilePath == null || !System.IO.File.Exists(logFilePath))
+        if (logFilePath == null)
         {
             return NotFound("Diagnostic log file not found");
         }

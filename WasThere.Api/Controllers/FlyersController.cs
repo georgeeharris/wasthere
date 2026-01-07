@@ -679,10 +679,12 @@ public class FlyersController : ControllerBase
     public IActionResult DownloadDiagnosticLog(string logId)
     {
         // Validate logId format to prevent path traversal attacks
+        // Expected format: yyyyMMdd-HHmmss-fff (e.g., 20240107-143025-123)
         if (string.IsNullOrWhiteSpace(logId) || 
             logId.Contains("..") || 
             logId.Contains("/") || 
-            logId.Contains("\\"))
+            logId.Contains("\\") ||
+            !System.Text.RegularExpressions.Regex.IsMatch(logId, @"^\d{8}-\d{6}-\d{3}$"))
         {
             return BadRequest("Invalid log ID format");
         }

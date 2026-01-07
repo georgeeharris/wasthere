@@ -13,6 +13,11 @@ public interface IFlyerConversionLogger
     string StartConversionLog(string imagePath, string fileName);
     
     /// <summary>
+    /// Get the log file path for a given log ID
+    /// </summary>
+    string? GetLogFilePath(string logId);
+    
+    /// <summary>
     /// Log the Gemini API request details
     /// </summary>
     void LogGeminiRequest(string logId, string prompt, string imagePath, long imageSizeBytes, string mimeType);

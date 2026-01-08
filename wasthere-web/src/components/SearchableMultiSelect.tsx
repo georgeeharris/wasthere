@@ -11,6 +11,7 @@ interface SearchableMultiSelectProps {
   selectedIds: number[];
   onChange: (selectedIds: number[]) => void;
   placeholder?: string;
+  maxSelections?: number;
 }
 
 export function SearchableMultiSelect({
@@ -18,6 +19,7 @@ export function SearchableMultiSelect({
   selectedIds,
   onChange,
   placeholder = 'Select...',
+  maxSelections,
 }: SearchableMultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,10 +47,13 @@ export function SearchableMultiSelect({
   const selectedOptions = options.filter((option) => selectedIds.includes(option.id));
 
   const toggleOption = (optionId: number) => {
-    const newSelectedIds = selectedIds.includes(optionId)
-      ? selectedIds.filter((id) => id !== optionId)
-      : [...selectedIds, optionId];
-    onChange(newSelectedIds);
+    if (selectedIds.includes(optionId)) {
+      // Remove if already selected
+      onChange(selectedIds.filter((id) => id !== optionId));
+    } else if (!maxSelections || selectedIds.length < maxSelections) {
+      // Add if not at max selections
+      onChange([...selectedIds, optionId]);
+    }
   };
 
   const removeOption = (optionId: number) => {
@@ -110,17 +115,27 @@ export function SearchableMultiSelect({
             {filteredOptions.length === 0 ? (
               <div className="no-options">No acts found</div>
             ) : (
-              filteredOptions.map((option) => (
-                <label key={option.id} className="option-item" htmlFor={`act-${option.id}`}>
-                  <input
-                    id={`act-${option.id}`}
-                    type="checkbox"
-                    checked={selectedIds.includes(option.id)}
-                    onChange={() => toggleOption(option.id)}
-                  />
-                  <span>{option.name}</span>
-                </label>
-              ))
+              filteredOptions.map((option) => {
+                const isSelected = selectedIds.includes(option.id);
+                const isDisabled = !isSelected && !!maxSelections && selectedIds.length >= maxSelections;
+                
+                return (
+                  <label 
+                    key={option.id} 
+                    className={`option-item ${isDisabled ? 'option-disabled' : ''}`} 
+                    htmlFor={`act-${option.id}`}
+                  >
+                    <input
+                      id={`act-${option.id}`}
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleOption(option.id)}
+                      disabled={isDisabled}
+                    />
+                    <span>{option.name}</span>
+                  </label>
+                );
+              })
             )}
           </div>
         </div>

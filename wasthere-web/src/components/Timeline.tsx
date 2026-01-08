@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import type { ClubNight, Event } from '../types';
 import { clubNightsApi, eventsApi, flyersApi } from '../services/api';
+import { SearchableMultiSelect } from './SearchableMultiSelect';
 
 export function Timeline() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const [events, setEvents] = useState<Event[]>([]);
-  const [selectedEventId, setSelectedEventId] = useState<number>(0);
+  const [selectedEventIds, setSelectedEventIds] = useState<number[]>([]);
   const [clubNights, setClubNights] = useState<ClubNight[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -15,13 +16,15 @@ export function Timeline() {
     loadEvents();
   }, []);
 
-  // Read eventId from URL on load
+  // Read eventIds from URL on load
   useEffect(() => {
-    const eventIdParam = searchParams.get('eventId');
-    if (eventIdParam) {
-      const eventId = parseInt(eventIdParam, 10);
-      if (!isNaN(eventId)) {
-        setSelectedEventId(eventId);
+    const eventIdsParam = searchParams.get('eventIds');
+    if (eventIdsParam) {
+      const eventIds = eventIdsParam.split(',')
+        .map(id => parseInt(id, 10))
+        .filter(id => !isNaN(id));
+      if (eventIds.length > 0) {
+        setSelectedEventIds(eventIds.slice(0, 3)); // Max 3 events
       }
     }
   }, [searchParams]);
@@ -30,7 +33,7 @@ export function Timeline() {
     setLoading(true);
     try {
       const allClubNights = await clubNightsApi.getAll();
-      const filtered = allClubNights.filter(cn => cn.eventId === selectedEventId);
+      const filtered = allClubNights.filter(cn => selectedEventIds.includes(cn.eventId));
       // Sort by date ascending (oldest first)
       filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       setClubNights(filtered);
@@ -39,15 +42,15 @@ export function Timeline() {
     } finally {
       setLoading(false);
     }
-  }, [selectedEventId]);
+  }, [selectedEventIds]);
 
   useEffect(() => {
-    if (selectedEventId > 0) {
+    if (selectedEventIds.length > 0) {
       loadClubNights();
     } else {
       setClubNights([]);
     }
-  }, [selectedEventId, loadClubNights]);
+  }, [selectedEventIds, loadClubNights]);
 
   const loadEvents = async () => {
     try {
@@ -85,22 +88,26 @@ export function Timeline() {
     return `${otherActs}, and ${lastAct}`;
   };
 
-  // Group club nights by year and month
+  // Group club nights by year, month, and date for multi-column display
   const groupedClubNights = clubNights.reduce((acc, clubNight) => {
     const date = new Date(clubNight.date);
     const year = date.getFullYear();
     const month = date.getMonth();
+    const dateKey = date.toISOString().split('T')[0]; // YYYY-MM-DD
     
     if (!acc[year]) {
       acc[year] = {};
     }
     if (!acc[year][month]) {
-      acc[year][month] = [];
+      acc[year][month] = {};
     }
-    acc[year][month].push(clubNight);
+    if (!acc[year][month][dateKey]) {
+      acc[year][month][dateKey] = [];
+    }
+    acc[year][month][dateKey].push(clubNight);
     
     return acc;
-  }, {} as Record<number, Record<number, ClubNight[]>>);
+  }, {} as Record<number, Record<number, Record<string, ClubNight[]>>>);
 
   const getDateRange = () => {
     if (clubNights.length === 0) return null;
@@ -120,15 +127,19 @@ export function Timeline() {
     const startYear = minDate.getFullYear();
     const endYear = maxDate.getFullYear();
     
-    const structure: Array<{ year: number; month: number; clubNights: ClubNight[] }> = [];
+    const structure: Array<{ year: number; month: number; dates: Array<{ dateKey: string; clubNights: ClubNight[] }> }> = [];
     
     for (let year = startYear; year <= endYear; year++) {
       const startMonth = year === startYear ? minDate.getMonth() : 0;
       const endMonth = year === endYear ? maxDate.getMonth() : 11;
       
       for (let month = startMonth; month <= endMonth; month++) {
-        const nights = groupedClubNights[year]?.[month] || [];
-        structure.push({ year, month, clubNights: nights });
+        const datesInMonth = groupedClubNights[year]?.[month] || {};
+        const dateEntries = Object.entries(datesInMonth)
+          .sort(([dateKeyA], [dateKeyB]) => dateKeyA.localeCompare(dateKeyB))
+          .map(([dateKey, nights]) => ({ dateKey, clubNights: nights }));
+        
+        structure.push({ year, month, dates: dateEntries });
       }
     }
     
@@ -142,10 +153,12 @@ export function Timeline() {
   };
 
   // Update URL when event selection changes
-  const handleEventChange = (eventId: number) => {
-    setSelectedEventId(eventId);
-    if (eventId > 0) {
-      setSearchParams({ eventId: eventId.toString() });
+  const handleEventChange = (eventIds: number[]) => {
+    // Limit to 3 events
+    const limitedEventIds = eventIds.slice(0, 3);
+    setSelectedEventIds(limitedEventIds);
+    if (limitedEventIds.length > 0) {
+      setSearchParams({ eventIds: limitedEventIds.join(',') });
     } else {
       setSearchParams({});
     }
@@ -158,30 +171,27 @@ export function Timeline() {
       </div>
 
       <div className="timeline-selector">
-        <label htmlFor="event-select">Select an event to view its timeline:</label>
-        <select
-          id="event-select"
-          value={selectedEventId}
-          onChange={(e) => handleEventChange(Number(e.target.value))}
-          className="input"
-        >
-          <option value={0}>Choose an event...</option>
-          {events.map((event) => (
-            <option key={event.id} value={event.id}>
-              {event.name}
-            </option>
-          ))}
-        </select>
+        <label htmlFor="event-select">Select up to 3 events to view their timeline:</label>
+        <SearchableMultiSelect
+          options={events}
+          selectedIds={selectedEventIds}
+          onChange={handleEventChange}
+          placeholder="Choose events..."
+          maxSelections={3}
+        />
+        {selectedEventIds.length >= 3 && (
+          <p className="timeline-limit-notice">Maximum of 3 events selected</p>
+        )}
       </div>
 
       {loading && <p className="loading-state">Loading club nights...</p>}
 
-      {!loading && selectedEventId === 0 && (
-        <p className="empty-state">Please select an event to view its timeline.</p>
+      {!loading && selectedEventIds.length === 0 && (
+        <p className="empty-state">Please select at least one event to view its timeline.</p>
       )}
 
-      {!loading && selectedEventId > 0 && clubNights.length === 0 && (
-        <p className="empty-state">No club nights found for this event.</p>
+      {!loading && selectedEventIds.length > 0 && clubNights.length === 0 && (
+        <p className="empty-state">No club nights found for the selected event(s).</p>
       )}
 
       {!loading && clubNights.length > 0 && (
@@ -202,29 +212,54 @@ export function Timeline() {
                 </div>
                 
                 <div className="timeline-events">
-                  {item.clubNights.length === 0 ? (
+                  {item.dates.length === 0 ? (
                     <div className="timeline-empty">No events this month</div>
                   ) : (
-                    item.clubNights.map((clubNight) => (
+                    item.dates.map((dateEntry) => (
                       <div 
-                        key={clubNight.id} 
-                        className="timeline-card timeline-card-clickable"
-                        onClick={() => navigate(`/nights/${clubNight.id}`)}
+                        key={dateEntry.dateKey}
+                        className={`timeline-date-row ${selectedEventIds.length > 1 ? 'multi-event' : ''}`}
+                        style={{ 
+                          display: 'grid',
+                          gridTemplateColumns: `repeat(${selectedEventIds.length}, 1fr)`,
+                          gap: '1rem'
+                        }}
                       >
-                        {clubNight.flyerThumbnailPath && (
-                          <div className="timeline-card-thumbnail">
-                            <img
-                              src={flyersApi.getImageUrl(clubNight.flyerThumbnailPath)}
-                              alt="Flyer thumbnail"
-                              className="timeline-thumbnail-image"
-                            />
-                          </div>
-                        )}
-                        <div className="timeline-card-content">
-                          <div className="timeline-card-date">{formatDate(clubNight.date)}</div>
-                          <div className="timeline-card-venue">{clubNight.venueName}</div>
-                          <div className="timeline-card-acts">{formatActs(clubNight.acts)}</div>
-                        </div>
+                        {selectedEventIds.map((eventId) => {
+                          const clubNight = dateEntry.clubNights.find(cn => cn.eventId === eventId);
+                          
+                          if (!clubNight) {
+                            return (
+                              <div 
+                                key={`${dateEntry.dateKey}-${eventId}`}
+                                className="timeline-card-placeholder"
+                              />
+                            );
+                          }
+                          
+                          return (
+                            <div 
+                              key={clubNight.id} 
+                              className="timeline-card timeline-card-clickable"
+                              onClick={() => navigate(`/nights/${clubNight.id}`)}
+                            >
+                              {clubNight.flyerThumbnailPath && (
+                                <div className="timeline-card-thumbnail">
+                                  <img
+                                    src={flyersApi.getImageUrl(clubNight.flyerThumbnailPath)}
+                                    alt="Flyer thumbnail"
+                                    className="timeline-thumbnail-image"
+                                  />
+                                </div>
+                              )}
+                              <div className="timeline-card-content">
+                                <div className="timeline-card-date">{formatDate(clubNight.date)}</div>
+                                <div className="timeline-card-venue">{clubNight.venueName}</div>
+                                <div className="timeline-card-acts">{formatActs(clubNight.acts)}</div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     ))
                   )}

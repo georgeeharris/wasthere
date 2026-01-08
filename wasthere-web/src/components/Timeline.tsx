@@ -277,7 +277,7 @@ export function Timeline() {
                           return (
                             <div 
                               key={clubNight.id} 
-                              className={`timeline-card timeline-card-clickable ${clubNight.wasThereByAdmin ? 'was-there' : ''}`}
+                              className={['timeline-card', 'timeline-card-clickable', clubNight.wasThereByAdmin && 'was-there'].filter(Boolean).join(' ')}
                             >
                               <div onClick={() => navigate(`/nights/${clubNight.id}`)}>
                                 {clubNight.flyerThumbnailPath && (

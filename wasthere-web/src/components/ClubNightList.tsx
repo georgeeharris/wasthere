@@ -375,7 +375,7 @@ export function ClubNightList() {
           paginatedItems.map((clubNight) => (
             <div 
               key={clubNight.id} 
-              className={`club-night-card ${clubNight.wasThereByAdmin ? 'was-there' : ''}`}
+              className={['club-night-card', clubNight.wasThereByAdmin && 'was-there'].filter(Boolean).join(' ')}
             >
               <div className="club-night-header">
                 <div>

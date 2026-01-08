@@ -188,13 +188,13 @@ export const clubNightsApi = {
   },
   
   markWasThere: async (id: number): Promise<void> => {
-    await fetch(`${API_BASE_URL}/clubnights/${id}/was-there`, {
+    await authenticatedFetch(`${API_BASE_URL}/clubnights/${id}/was-there`, {
       method: 'POST',
     });
   },
   
   unmarkWasThere: async (id: number): Promise<void> => {
-    await fetch(`${API_BASE_URL}/clubnights/${id}/was-there`, {
+    await authenticatedFetch(`${API_BASE_URL}/clubnights/${id}/was-there`, {
       method: 'DELETE',
     });
   },

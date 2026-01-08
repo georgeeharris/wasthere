@@ -4,6 +4,10 @@ import type { ClubNight, Event } from '../types';
 import { clubNightsApi, eventsApi, flyersApi } from '../services/api';
 import { SearchableMultiSelect } from './SearchableMultiSelect';
 
+const MAX_EVENTS = 3;
+
+type GroupedClubNights = Record<number, Record<number, Record<string, ClubNight[]>>>;
+
 export function Timeline() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -24,7 +28,7 @@ export function Timeline() {
         .map(id => parseInt(id, 10))
         .filter(id => !isNaN(id));
       if (eventIds.length > 0) {
-        setSelectedEventIds(eventIds.slice(0, 3)); // Max 3 events
+        setSelectedEventIds(eventIds.slice(0, MAX_EVENTS));
       }
     }
   }, [searchParams]);
@@ -89,7 +93,7 @@ export function Timeline() {
   };
 
   // Group club nights by year, month, and date for multi-column display
-  const groupedClubNights = clubNights.reduce((acc, clubNight) => {
+  const groupedClubNights: GroupedClubNights = clubNights.reduce((acc, clubNight) => {
     const date = new Date(clubNight.date);
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -107,7 +111,7 @@ export function Timeline() {
     acc[year][month][dateKey].push(clubNight);
     
     return acc;
-  }, {} as Record<number, Record<number, Record<string, ClubNight[]>>>);
+  }, {} as GroupedClubNights);
 
   const getDateRange = () => {
     if (clubNights.length === 0) return null;
@@ -154,8 +158,8 @@ export function Timeline() {
 
   // Update URL when event selection changes
   const handleEventChange = (eventIds: number[]) => {
-    // Limit to 3 events
-    const limitedEventIds = eventIds.slice(0, 3);
+    // Limit to MAX_EVENTS
+    const limitedEventIds = eventIds.slice(0, MAX_EVENTS);
     setSelectedEventIds(limitedEventIds);
     if (limitedEventIds.length > 0) {
       setSearchParams({ eventIds: limitedEventIds.join(',') });
@@ -171,16 +175,16 @@ export function Timeline() {
       </div>
 
       <div className="timeline-selector">
-        <label htmlFor="event-select">Select up to 3 events to view their timeline:</label>
+        <label htmlFor="event-select">Select up to {MAX_EVENTS} events to view their timeline:</label>
         <SearchableMultiSelect
           options={events}
           selectedIds={selectedEventIds}
           onChange={handleEventChange}
           placeholder="Choose events..."
-          maxSelections={3}
+          maxSelections={MAX_EVENTS}
         />
-        {selectedEventIds.length >= 3 && (
-          <p className="timeline-limit-notice">Maximum of 3 events selected</p>
+        {selectedEventIds.length >= MAX_EVENTS && (
+          <p className="timeline-limit-notice">Maximum of {MAX_EVENTS} events selected</p>
         )}
       </div>
 

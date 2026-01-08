@@ -130,6 +130,15 @@
   background-color: #f5f5f5;
 }
 
+.option-item.option-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.option-item.option-disabled input[type="checkbox"] {
+  cursor: not-allowed;
+}
+
 .option-item input[type="checkbox"] {
   cursor: pointer;
   width: 16px;

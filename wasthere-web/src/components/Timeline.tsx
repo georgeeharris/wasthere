@@ -15,6 +15,7 @@ export function Timeline() {
   const [selectedEventIds, setSelectedEventIds] = useState<number[]>([]);
   const [clubNights, setClubNights] = useState<ClubNight[]>([]);
   const [loading, setLoading] = useState(false);
+  const [filterWasThere, setFilterWasThere] = useState<boolean>(false);
 
   useEffect(() => {
     loadEvents();
@@ -37,7 +38,13 @@ export function Timeline() {
     setLoading(true);
     try {
       const allClubNights = await clubNightsApi.getAll();
-      const filtered = allClubNights.filter(cn => selectedEventIds.includes(cn.eventId));
+      let filtered = allClubNights.filter(cn => selectedEventIds.includes(cn.eventId));
+      
+      // Apply "was there" filter
+      if (filterWasThere) {
+        filtered = filtered.filter(cn => cn.wasThereByAdmin);
+      }
+      
       // Sort by date ascending (oldest first)
       filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
       setClubNights(filtered);
@@ -46,7 +53,7 @@ export function Timeline() {
     } finally {
       setLoading(false);
     }
-  }, [selectedEventIds]);
+  }, [selectedEventIds, filterWasThere]);
 
   useEffect(() => {
     if (selectedEventIds.length > 0) {
@@ -62,6 +69,19 @@ export function Timeline() {
       setEvents(eventsData);
     } catch (error) {
       console.error('Failed to load events:', error);
+    }
+  };
+  
+  const handleWasThereToggle = async (clubNightId: number, currentStatus: boolean) => {
+    try {
+      if (currentStatus) {
+        await clubNightsApi.unmarkWasThere(clubNightId);
+      } else {
+        await clubNightsApi.markWasThere(clubNightId);
+      }
+      await loadClubNights();
+    } catch (error) {
+      console.error('Failed to update was there status:', error);
     }
   };
 
@@ -187,6 +207,19 @@ export function Timeline() {
           <p className="timeline-limit-notice">Maximum of {MAX_EVENTS} events selected</p>
         )}
       </div>
+      
+      {selectedEventIds.length > 0 && (
+        <div className="timeline-filter">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={filterWasThere}
+              onChange={(e) => setFilterWasThere(e.target.checked)}
+            />
+            Only show nights I was there
+          </label>
+        </div>
+      )}
 
       {loading && <p className="loading-state">Loading club nights...</p>}
 
@@ -244,22 +277,36 @@ export function Timeline() {
                           return (
                             <div 
                               key={clubNight.id} 
-                              className="timeline-card timeline-card-clickable"
-                              onClick={() => navigate(`/nights/${clubNight.id}`)}
+                              className={['timeline-card', 'timeline-card-clickable', clubNight.wasThereByAdmin && 'was-there'].filter(Boolean).join(' ')}
                             >
-                              {clubNight.flyerThumbnailPath && (
-                                <div className="timeline-card-thumbnail">
-                                  <img
-                                    src={flyersApi.getImageUrl(clubNight.flyerThumbnailPath)}
-                                    alt="Flyer thumbnail"
-                                    className="timeline-thumbnail-image"
-                                  />
+                              <div onClick={() => navigate(`/nights/${clubNight.id}`)}>
+                                {clubNight.flyerThumbnailPath && (
+                                  <div className="timeline-card-thumbnail">
+                                    <img
+                                      src={flyersApi.getImageUrl(clubNight.flyerThumbnailPath)}
+                                      alt="Flyer thumbnail"
+                                      className="timeline-thumbnail-image"
+                                    />
+                                  </div>
+                                )}
+                                <div className="timeline-card-content">
+                                  <div className="timeline-card-date">{formatDate(clubNight.date)}</div>
+                                  <div className="timeline-card-venue">{clubNight.venueName}</div>
+                                  <div className="timeline-card-acts">{formatActs(clubNight.acts)}</div>
                                 </div>
-                              )}
-                              <div className="timeline-card-content">
-                                <div className="timeline-card-date">{formatDate(clubNight.date)}</div>
-                                <div className="timeline-card-venue">{clubNight.venueName}</div>
-                                <div className="timeline-card-acts">{formatActs(clubNight.acts)}</div>
+                              </div>
+                              <div 
+                                className="was-there-checkbox"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <label className="checkbox-label">
+                                  <input
+                                    type="checkbox"
+                                    checked={clubNight.wasThereByAdmin || false}
+                                    onChange={() => handleWasThereToggle(clubNight.id, clubNight.wasThereByAdmin || false)}
+                                  />
+                                  Was there
+                                </label>
                               </div>
                             </div>
                           );

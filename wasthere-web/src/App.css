@@ -183,6 +183,28 @@
   font-style: italic;
 }
 
+.timeline-filter {
+  margin: 1rem 0;
+  padding: 1rem;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+}
+
+.timeline-filter .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  color: #646cff;
+  cursor: pointer;
+}
+
+.timeline-filter input[type="checkbox"] {
+  cursor: pointer;
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
 .loading-state {
   text-align: center;
   color: #666;
@@ -266,8 +288,17 @@
   min-height: 100px;
 }
 
+.timeline-card.was-there {
+  border: 3px solid #ffd700;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+}
+
 .timeline-card:hover {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.timeline-card.was-there:hover {
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
 }
 
 .timeline-card-thumbnail {
@@ -599,8 +630,17 @@
   transition: box-shadow 0.2s;
 }
 
+.club-night-card.was-there {
+  border: 3px solid #ffd700;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.3);
+}
+
 .club-night-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.club-night-card.was-there:hover {
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.4);
 }
 
 .club-night-header {
@@ -668,6 +708,25 @@
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid #ddd;
+}
+
+.was-there-checkbox {
+  margin: 0.75rem 0;
+}
+
+.was-there-checkbox .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 500;
+  color: #646cff;
+  cursor: pointer;
+}
+
+.was-there-checkbox input[type="checkbox"] {
+  cursor: pointer;
+  width: 1.1rem;
+  height: 1.1rem;
 }
 
 .empty-state {

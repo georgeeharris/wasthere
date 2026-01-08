@@ -30,6 +30,7 @@ export interface ClubNight {
   flyerFilePath?: string | null;
   flyerThumbnailPath?: string | null;
   acts: ClubNightAct[];
+  wasThereByAdmin?: boolean;
 }
 
 export interface ClubNightActDto {

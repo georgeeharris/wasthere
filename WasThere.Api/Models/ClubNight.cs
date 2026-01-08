@@ -15,4 +15,5 @@ public class ClubNight
     public Flyer? Flyer { get; set; }
     
     public ICollection<ClubNightAct> ClubNightActs { get; set; } = new List<ClubNightAct>();
+    public ICollection<UserClubNightAttendance> Attendances { get; set; } = new List<UserClubNightAttendance>();
 }

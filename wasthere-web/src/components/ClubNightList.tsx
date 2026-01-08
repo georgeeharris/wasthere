@@ -30,6 +30,7 @@ export function ClubNightList() {
   const [filterActIds, setFilterActIds] = useState<number[]>([]);
   const [filterDateFrom, setFilterDateFrom] = useState<string>('');
   const [filterDateTo, setFilterDateTo] = useState<string>('');
+  const [filterWasThere, setFilterWasThere] = useState<boolean>(false);
 
   // Apply filters and sorting to club nights
   const filteredAndSortedClubNights = clubNights
@@ -42,6 +43,7 @@ export function ClubNightList() {
       }
       if (filterDateFrom && new Date(cn.date) < new Date(filterDateFrom)) return false;
       if (filterDateTo && new Date(cn.date) > new Date(filterDateTo)) return false;
+      if (filterWasThere && !cn.wasThereByAdmin) return false;
       return true;
     })
     .sort((a, b) => {
@@ -137,6 +139,19 @@ export function ClubNightList() {
       month: 'short',
       year: 'numeric',
     });
+  };
+  
+  const handleWasThereToggle = async (clubNightId: number, currentStatus: boolean) => {
+    try {
+      if (currentStatus) {
+        await clubNightsApi.unmarkWasThere(clubNightId);
+      } else {
+        await clubNightsApi.markWasThere(clubNightId);
+      }
+      await loadAll();
+    } catch (error) {
+      console.error('Failed to update was there status:', error);
+    }
   };
 
   return (
@@ -253,6 +268,7 @@ export function ClubNightList() {
                 setFilterActIds([]);
                 setFilterDateFrom('');
                 setFilterDateTo('');
+                setFilterWasThere(false);
               }}
             >
               Clear All
@@ -333,6 +349,17 @@ export function ClubNightList() {
                 ))}
               </div>
             </div>
+            
+            <div className="filter-group filter-group-full">
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={filterWasThere}
+                  onChange={(e) => setFilterWasThere(e.target.checked)}
+                />
+                Only show nights I was there
+              </label>
+            </div>
           </div>
         </div>
       )}
@@ -346,13 +373,27 @@ export function ClubNightList() {
           </p>
         ) : (
           paginatedItems.map((clubNight) => (
-            <div key={clubNight.id} className="club-night-card">
+            <div 
+              key={clubNight.id} 
+              className={['club-night-card', clubNight.wasThereByAdmin && 'was-there'].filter(Boolean).join(' ')}
+            >
               <div className="club-night-header">
                 <div>
                   <h3>{clubNight.eventName}</h3>
                   <p className="venue-name">{clubNight.venueName}</p>
                 </div>
                 <div className="club-night-date">{formatDate(clubNight.date)}</div>
+              </div>
+              
+              <div className="was-there-checkbox">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={clubNight.wasThereByAdmin || false}
+                    onChange={() => handleWasThereToggle(clubNight.id, clubNight.wasThereByAdmin || false)}
+                  />
+                  Was there
+                </label>
               </div>
               
               {clubNight.acts.length > 0 && (

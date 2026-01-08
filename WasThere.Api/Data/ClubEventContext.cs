@@ -15,6 +15,8 @@ public class ClubEventContext : DbContext
     public DbSet<ClubNight> ClubNights { get; set; } = null!;
     public DbSet<ClubNightAct> ClubNightActs { get; set; } = null!;
     public DbSet<Flyer> Flyers { get; set; } = null!;
+    public DbSet<User> Users { get; set; } = null!;
+    public DbSet<UserClubNightAttendance> UserClubNightAttendances { get; set; } = null!;
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -52,5 +54,24 @@ public class ClubEventContext : DbContext
             .WithMany(f => f.ClubNights)
             .HasForeignKey(cn => cn.FlyerId)
             .OnDelete(DeleteBehavior.SetNull);
+        
+        // Configure User entity
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Username)
+            .IsUnique();
+        
+        // Configure UserClubNightAttendance many-to-many relationship
+        modelBuilder.Entity<UserClubNightAttendance>()
+            .HasKey(ucna => new { ucna.UserId, ucna.ClubNightId });
+            
+        modelBuilder.Entity<UserClubNightAttendance>()
+            .HasOne(ucna => ucna.User)
+            .WithMany(u => u.Attendances)
+            .HasForeignKey(ucna => ucna.UserId);
+            
+        modelBuilder.Entity<UserClubNightAttendance>()
+            .HasOne(ucna => ucna.ClubNight)
+            .WithMany(cn => cn.Attendances)
+            .HasForeignKey(ucna => ucna.ClubNightId);
     }
 }

@@ -21,12 +21,17 @@ public class ClubNightsController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<object>>> GetClubNights()
     {
+        // Get admin user ID (hardcoded for now)
+        var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
+        var adminUserId = adminUser?.Id ?? 0;
+        
         var clubNights = await _context.ClubNights
             .Include(cn => cn.Event)
             .Include(cn => cn.Venue)
             .Include(cn => cn.Flyer)
             .Include(cn => cn.ClubNightActs)
                 .ThenInclude(cna => cna.Act)
+            .Include(cn => cn.Attendances)
             .Select(cn => new
             {
                 cn.Id,
@@ -42,7 +47,8 @@ public class ClubNightsController : ControllerBase
                     cna.ActId,
                     ActName = cna.Act!.Name,
                     cna.IsLiveSet
-                }).ToList()
+                }).ToList(),
+                WasThereByAdmin = cn.Attendances.Any(a => a.UserId == adminUserId)
             })
             .ToListAsync();
 
@@ -53,12 +59,17 @@ public class ClubNightsController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<object>> GetClubNight(int id)
     {
+        // Get admin user ID (hardcoded for now)
+        var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
+        var adminUserId = adminUser?.Id ?? 0;
+        
         var clubNight = await _context.ClubNights
             .Include(cn => cn.Event)
             .Include(cn => cn.Venue)
             .Include(cn => cn.Flyer)
             .Include(cn => cn.ClubNightActs)
                 .ThenInclude(cna => cna.Act)
+            .Include(cn => cn.Attendances)
             .Where(cn => cn.Id == id)
             .Select(cn => new
             {
@@ -76,7 +87,8 @@ public class ClubNightsController : ControllerBase
                     cna.ActId,
                     ActName = cna.Act!.Name,
                     cna.IsLiveSet
-                }).ToList()
+                }).ToList(),
+                WasThereByAdmin = cn.Attendances.Any(a => a.UserId == adminUserId)
             })
             .FirstOrDefaultAsync();
 
@@ -169,6 +181,64 @@ public class ClubNightsController : ControllerBase
         await _context.SaveChangesAsync();
 
         return NoContent();
+    }
+    
+    [HttpPost("{id}/was-there")]
+    [AllowAnonymous]
+    public async Task<IActionResult> MarkWasThere(int id)
+    {
+        // Get admin user (hardcoded for now)
+        var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
+        if (adminUser == null)
+        {
+            return BadRequest("Admin user not found. Please run migrations.");
+        }
+        
+        var clubNight = await _context.ClubNights.FindAsync(id);
+        if (clubNight == null)
+        {
+            return NotFound();
+        }
+        
+        // Check if already marked
+        var existing = await _context.UserClubNightAttendances
+            .FirstOrDefaultAsync(a => a.UserId == adminUser.Id && a.ClubNightId == id);
+        
+        if (existing == null)
+        {
+            _context.UserClubNightAttendances.Add(new UserClubNightAttendance
+            {
+                UserId = adminUser.Id,
+                ClubNightId = id,
+                MarkedAt = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+        }
+        
+        return Ok();
+    }
+    
+    [HttpDelete("{id}/was-there")]
+    [AllowAnonymous]
+    public async Task<IActionResult> UnmarkWasThere(int id)
+    {
+        // Get admin user (hardcoded for now)
+        var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
+        if (adminUser == null)
+        {
+            return BadRequest("Admin user not found. Please run migrations.");
+        }
+        
+        var attendance = await _context.UserClubNightAttendances
+            .FirstOrDefaultAsync(a => a.UserId == adminUser.Id && a.ClubNightId == id);
+        
+        if (attendance != null)
+        {
+            _context.UserClubNightAttendances.Remove(attendance);
+            await _context.SaveChangesAsync();
+        }
+        
+        return Ok();
     }
 }
 

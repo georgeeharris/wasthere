@@ -11,6 +11,8 @@ import { FlyerList } from './components/FlyerList';
 import { Contribute } from './components/Contribute';
 import { Timeline } from './components/Timeline';
 import { Home } from './components/Home';
+import { Profile } from './components/Profile';
+import { ProfileCheckWrapper } from './components/ProfileCheckWrapper';
 import { setAccessTokenProvider } from './services/api';
 
 function App() {
@@ -47,6 +49,7 @@ function App() {
     if (location.pathname === '/events') return 'events';
     if (location.pathname === '/venues') return 'venues';
     if (location.pathname === '/acts') return 'acts';
+    if (location.pathname === '/profile') return 'profile';
     return 'home'; // default
   };
 
@@ -58,18 +61,19 @@ function App() {
   };
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <div className="header-content">
-          <h1>WasThere - Club Events Archive</h1>
-          <button 
-            className="burger-menu"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            <span></span>
-            <span></span>
-            <span></span>
+    <ProfileCheckWrapper>
+      <div className="app">
+        <header className="app-header">
+          <div className="header-content">
+            <h1>WasThere - Club Events Archive</h1>
+            <button 
+              className="burger-menu"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
+            >
+              <span></span>
+              <span></span>
+              <span></span>
           </button>
         </div>
         <nav className={`tabs ${mobileMenuOpen ? 'mobile-open' : ''}`}>
@@ -123,12 +127,20 @@ function App() {
           </button>
           {!isLoading && (
             isAuthenticated ? (
-              <button 
-                className="tab" 
-                onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
-              >
-                Log Out
-              </button>
+              <>
+                <button 
+                  className={`tab ${activeTab === 'profile' ? 'active' : ''}`}
+                  onClick={() => handleNavigation('/profile')}
+                >
+                  Profile
+                </button>
+                <button 
+                  className="tab" 
+                  onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}
+                >
+                  Log Out
+                </button>
+              </>
             ) : (
               <button 
                 className="tab" 
@@ -152,6 +164,7 @@ function App() {
           <Route path="/events" element={<EventList />} />
           <Route path="/venues" element={<VenueList />} />
           <Route path="/acts" element={<ActList />} />
+          <Route path="/profile" element={<Profile />} />
           {/* Legacy routes for backwards compatibility */}
           <Route path="/master/events" element={<EventList />} />
           <Route path="/master/venues" element={<VenueList />} />
@@ -159,6 +172,7 @@ function App() {
         </Routes>
       </main>
     </div>
+    </ProfileCheckWrapper>
   );
 }
 

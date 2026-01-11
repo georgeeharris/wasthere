@@ -33,13 +33,10 @@ public class ClubNightsController : ControllerBase
         
         if (user == null)
         {
-            // Create new user
-            var email = User.FindFirst("email")?.Value ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value;
-            var username = email ?? auth0UserId.Split('|').Last();
-            
+            // Create new user without username - they must set it via profile page
             user = new User
             {
-                Username = username,
+                Username = null,
                 Auth0UserId = auth0UserId
             };
             

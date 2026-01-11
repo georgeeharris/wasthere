@@ -13,6 +13,12 @@ export interface Act {
   name: string;
 }
 
+export interface User {
+  id: number;
+  username: string | null;
+  auth0UserId: string | null;
+}
+
 export interface ClubNightAct {
   actId: number;
   actName: string;

@@ -40,7 +40,6 @@ export function ProfileCheckWrapper({ children }: ProfileCheckWrapperProps) {
         
         // If username is not set, redirect to profile page
         if (!profile.username) {
-          console.log('User has no username, redirecting to profile setup');
           navigate('/profile', { replace: true });
         }
       } catch (error) {

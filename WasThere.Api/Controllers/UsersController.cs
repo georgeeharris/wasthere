@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using WasThere.Api.Data;
 using WasThere.Api.Models;
 using System.Text.RegularExpressions;
+using System.ComponentModel.DataAnnotations;
 
 namespace WasThere.Api.Controllers;
 
@@ -108,8 +109,11 @@ public partial class UsersController : ControllerBase
             return NotFound(new { message = "User not found" });
         }
 
-        // Check if username is already taken by another user
-        var existingUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == dto.Username && u.Id != user.Id);
+        // Check if username is already taken by another user (case-insensitive)
+        var existingUser = await _context.Users.FirstOrDefaultAsync(u => 
+            u.Username != null && 
+            u.Username.ToLower() == dto.Username.ToLower() && 
+            u.Id != user.Id);
         if (existingUser != null)
         {
             return BadRequest(new { message = "Username is already taken" });
@@ -136,7 +140,8 @@ public partial class UsersController : ControllerBase
             return Ok(new UsernameAvailabilityDto { Available = false, Message = errorMessage });
         }
 
-        var exists = await _context.Users.AnyAsync(u => u.Username == username);
+        // Check if username exists (case-insensitive)
+        var exists = await _context.Users.AnyAsync(u => u.Username != null && u.Username.ToLower() == username.ToLower());
         
         return Ok(new UsernameAvailabilityDto 
         { 
@@ -155,6 +160,9 @@ public class UserProfileDto
 
 public class UpdateProfileDto
 {
+    [Required(ErrorMessage = "Username is required")]
+    [StringLength(20, MinimumLength = 3, ErrorMessage = "Username must be between 3 and 20 characters")]
+    [RegularExpression(@"^[a-zA-Z0-9_-]+$", ErrorMessage = "Username can only contain letters, numbers, hyphens, and underscores")]
     public required string Username { get; set; }
 }
 

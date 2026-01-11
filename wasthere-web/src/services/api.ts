@@ -1,4 +1,4 @@
-import type { Event, Venue, Act, ClubNight, ClubNightDto, Flyer, DiagnosticInfo, FlyerAnalysisResult } from '../types';
+import type { Event, Venue, Act, ClubNight, ClubNightDto, Flyer, DiagnosticInfo, FlyerAnalysisResult, User } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -374,4 +374,40 @@ export interface VenueDeleteImpact {
 
 export interface ActDeleteImpact {
   clubNightActsCount: number;
+}
+
+// Users API
+export const usersApi = {
+  getProfile: async (): Promise<User> => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/users/profile`);
+    if (!response.ok) {
+      throw new Error('Failed to get user profile');
+    }
+    return response.json();
+  },
+
+  updateProfile: async (username: string): Promise<User> => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/users/profile`, {
+      method: 'PUT',
+      body: JSON.stringify({ username }),
+    });
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to update profile');
+    }
+    return response.json();
+  },
+
+  checkUsername: async (username: string): Promise<UsernameAvailability> => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/users/check-username/${encodeURIComponent(username)}`);
+    if (!response.ok) {
+      throw new Error('Failed to check username availability');
+    }
+    return response.json();
+  },
+};
+
+export interface UsernameAvailability {
+  available: boolean;
+  message: string | null;
 }

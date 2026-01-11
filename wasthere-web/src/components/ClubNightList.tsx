@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth0 } from '@auth0/auth0-react';
 import type { ClubNight, Event, Venue, Act, ClubNightActDto } from '../types';
 import { clubNightsApi, eventsApi, venuesApi, actsApi } from '../services/api';
 import { ActSelector } from './ActSelector';
@@ -8,6 +9,7 @@ import { Pagination } from './Pagination';
 
 export function ClubNightList() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth0();
   const [clubNights, setClubNights] = useState<ClubNight[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [venues, setVenues] = useState<Venue[]>([]);
@@ -350,16 +352,18 @@ export function ClubNightList() {
               </div>
             </div>
             
-            <div className="filter-group filter-group-full">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={filterWasThere}
-                  onChange={(e) => setFilterWasThere(e.target.checked)}
-                />
-                Only show nights I was there
-              </label>
-            </div>
+            {isAuthenticated && (
+              <div className="filter-group filter-group-full">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={filterWasThere}
+                    onChange={(e) => setFilterWasThere(e.target.checked)}
+                  />
+                  Only show nights I was there
+                </label>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -385,16 +389,18 @@ export function ClubNightList() {
                 <div className="club-night-date">{formatDate(clubNight.date)}</div>
               </div>
               
-              <div className="was-there-checkbox">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={clubNight.wasThereByAdmin || false}
-                    onChange={() => handleWasThereToggle(clubNight.id, clubNight.wasThereByAdmin || false)}
-                  />
-                  Was there
-                </label>
-              </div>
+              {isAuthenticated && (
+                <div className="was-there-checkbox">
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={clubNight.wasThereByAdmin || false}
+                      onChange={() => handleWasThereToggle(clubNight.id, clubNight.wasThereByAdmin || false)}
+                    />
+                    Was there
+                  </label>
+                </div>
+              )}
               
               {clubNight.acts.length > 0 && (
                 <div className="acts-section">

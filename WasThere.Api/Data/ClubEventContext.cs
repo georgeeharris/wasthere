@@ -60,6 +60,10 @@ public class ClubEventContext : DbContext
             .HasIndex(u => u.Username)
             .IsUnique();
         
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.Auth0UserId)
+            .IsUnique();
+        
         // Configure UserClubNightAttendance many-to-many relationship
         modelBuilder.Entity<UserClubNightAttendance>()
             .HasKey(ucna => new { ucna.UserId, ucna.ClubNightId });

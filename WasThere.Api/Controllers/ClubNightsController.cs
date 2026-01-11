@@ -16,14 +16,47 @@ public class ClubNightsController : ControllerBase
     {
         _context = context;
     }
+    
+    private async Task<User?> GetOrCreateCurrentUserAsync()
+    {
+        // Try to get Auth0 user ID from claims
+        var auth0UserId = User.FindFirst("sub")?.Value ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+        
+        if (string.IsNullOrEmpty(auth0UserId))
+        {
+            // Fall back to admin user for unauthenticated requests (backward compatibility)
+            return await _context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
+        }
+        
+        // Try to find existing user by Auth0 ID
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Auth0UserId == auth0UserId);
+        
+        if (user == null)
+        {
+            // Create new user
+            var email = User.FindFirst("email")?.Value ?? User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value;
+            var username = email ?? auth0UserId.Split('|').Last();
+            
+            user = new User
+            {
+                Username = username,
+                Auth0UserId = auth0UserId
+            };
+            
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync();
+        }
+        
+        return user;
+    }
 
     [HttpGet]
     [AllowAnonymous]
     public async Task<ActionResult<IEnumerable<object>>> GetClubNights()
     {
-        // Get admin user ID (hardcoded for now)
-        var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
-        var adminUserId = adminUser?.Id ?? 0;
+        // Get current user (authenticated or fall back to admin)
+        var currentUser = await GetOrCreateCurrentUserAsync();
+        var userId = currentUser?.Id ?? 0;
         
         var clubNights = await _context.ClubNights
             .Include(cn => cn.Event)
@@ -48,7 +81,7 @@ public class ClubNightsController : ControllerBase
                     ActName = cna.Act!.Name,
                     cna.IsLiveSet
                 }).ToList(),
-                WasThereByAdmin = cn.Attendances.Any(a => a.UserId == adminUserId)
+                WasThereByAdmin = cn.Attendances.Any(a => a.UserId == userId)
             })
             .ToListAsync();
 
@@ -59,9 +92,9 @@ public class ClubNightsController : ControllerBase
     [AllowAnonymous]
     public async Task<ActionResult<object>> GetClubNight(int id)
     {
-        // Get admin user ID (hardcoded for now)
-        var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
-        var adminUserId = adminUser?.Id ?? 0;
+        // Get current user (authenticated or fall back to admin)
+        var currentUser = await GetOrCreateCurrentUserAsync();
+        var userId = currentUser?.Id ?? 0;
         
         var clubNight = await _context.ClubNights
             .Include(cn => cn.Event)
@@ -88,7 +121,7 @@ public class ClubNightsController : ControllerBase
                     ActName = cna.Act!.Name,
                     cna.IsLiveSet
                 }).ToList(),
-                WasThereByAdmin = cn.Attendances.Any(a => a.UserId == adminUserId)
+                WasThereByAdmin = cn.Attendances.Any(a => a.UserId == userId)
             })
             .FirstOrDefaultAsync();
 
@@ -184,14 +217,13 @@ public class ClubNightsController : ControllerBase
     }
     
     [HttpPost("{id}/was-there")]
-    [AllowAnonymous]
     public async Task<IActionResult> MarkWasThere(int id)
     {
-        // Get admin user (hardcoded for now)
-        var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
-        if (adminUser == null)
+        // Get current authenticated user
+        var currentUser = await GetOrCreateCurrentUserAsync();
+        if (currentUser == null)
         {
-            return BadRequest("Admin user not found. Please run migrations.");
+            return Unauthorized("User must be authenticated to mark attendance.");
         }
         
         var clubNight = await _context.ClubNights.FindAsync(id);
@@ -202,13 +234,13 @@ public class ClubNightsController : ControllerBase
         
         // Check if already marked
         var existing = await _context.UserClubNightAttendances
-            .FirstOrDefaultAsync(a => a.UserId == adminUser.Id && a.ClubNightId == id);
+            .FirstOrDefaultAsync(a => a.UserId == currentUser.Id && a.ClubNightId == id);
         
         if (existing == null)
         {
             _context.UserClubNightAttendances.Add(new UserClubNightAttendance
             {
-                UserId = adminUser.Id,
+                UserId = currentUser.Id,
                 ClubNightId = id,
                 MarkedAt = DateTime.UtcNow
             });
@@ -219,18 +251,17 @@ public class ClubNightsController : ControllerBase
     }
     
     [HttpDelete("{id}/was-there")]
-    [AllowAnonymous]
     public async Task<IActionResult> UnmarkWasThere(int id)
     {
-        // Get admin user (hardcoded for now)
-        var adminUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == "admin");
-        if (adminUser == null)
+        // Get current authenticated user
+        var currentUser = await GetOrCreateCurrentUserAsync();
+        if (currentUser == null)
         {
-            return BadRequest("Admin user not found. Please run migrations.");
+            return Unauthorized("User must be authenticated to modify attendance.");
         }
         
         var attendance = await _context.UserClubNightAttendances
-            .FirstOrDefaultAsync(a => a.UserId == adminUser.Id && a.ClubNightId == id);
+            .FirstOrDefaultAsync(a => a.UserId == currentUser.Id && a.ClubNightId == id);
         
         if (attendance != null)
         {

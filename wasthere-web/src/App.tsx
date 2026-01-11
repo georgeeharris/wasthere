@@ -16,7 +16,7 @@ import { setAccessTokenProvider } from './services/api';
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading, getAccessTokenSilently, user } = useAuth0();
+  const { isAuthenticated, isLoading, getAccessTokenSilently, user, logout, loginWithRedirect } = useAuth0();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Debug logging
@@ -121,8 +121,7 @@ function App() {
           >
             Acts
           </button>
-          {/* Login link hidden until authentication is working properly */}
-          {/* {!isLoading && (
+          {!isLoading && (
             isAuthenticated ? (
               <button 
                 className="tab" 
@@ -138,7 +137,7 @@ function App() {
                 Log In
               </button>
             )
-          )} */}
+          )}
         </nav>
       </header>
 

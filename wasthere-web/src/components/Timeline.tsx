@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useAuth0 } from '@auth0/auth0-react';
 import type { ClubNight, Event } from '../types';
 import { clubNightsApi, eventsApi, flyersApi } from '../services/api';
 import { SearchableMultiSelect } from './SearchableMultiSelect';
@@ -11,6 +12,7 @@ type GroupedClubNights = Record<number, Record<number, Record<string, ClubNight[
 export function Timeline() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth0();
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEventIds, setSelectedEventIds] = useState<number[]>([]);
   const [clubNights, setClubNights] = useState<ClubNight[]>([]);
@@ -208,7 +210,7 @@ export function Timeline() {
         )}
       </div>
       
-      {selectedEventIds.length > 0 && (
+      {selectedEventIds.length > 0 && isAuthenticated && (
         <div className="timeline-filter">
           <label className="checkbox-label">
             <input
@@ -295,19 +297,21 @@ export function Timeline() {
                                   <div className="timeline-card-acts">{formatActs(clubNight.acts)}</div>
                                 </div>
                               </div>
-                              <div 
-                                className="was-there-checkbox"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <label className="checkbox-label">
-                                  <input
-                                    type="checkbox"
-                                    checked={clubNight.wasThereByAdmin || false}
-                                    onChange={() => handleWasThereToggle(clubNight.id, clubNight.wasThereByAdmin || false)}
-                                  />
-                                  Was there
-                                </label>
-                              </div>
+                              {isAuthenticated && (
+                                <div 
+                                  className="was-there-checkbox"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <label className="checkbox-label">
+                                    <input
+                                      type="checkbox"
+                                      checked={clubNight.wasThereByAdmin || false}
+                                      onChange={() => handleWasThereToggle(clubNight.id, clubNight.wasThereByAdmin || false)}
+                                    />
+                                    Was there
+                                  </label>
+                                </div>
+                              )}
                             </div>
                           );
                         })}

@@ -154,12 +154,12 @@ export const actsApi = {
 // Club Nights API
 export const clubNightsApi = {
   getAll: async (): Promise<ClubNight[]> => {
-    const response = await fetch(`${API_BASE_URL}/clubnights`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/clubnights`);
     return response.json();
   },
   
   getById: async (id: number): Promise<ClubNight> => {
-    const response = await fetch(`${API_BASE_URL}/clubnights/${id}`);
+    const response = await authenticatedFetch(`${API_BASE_URL}/clubnights/${id}`);
     if (!response.ok) {
       throw new Error('Club night not found');
     }

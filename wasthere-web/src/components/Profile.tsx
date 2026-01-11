@@ -27,6 +27,20 @@ export function Profile() {
     }
   }, [isAuthenticated, isLoading, navigate]);
 
+  // Debounced username validation
+  useEffect(() => {
+    if (!username || username === user?.username) {
+      setValidationMessage(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      validateUsername(username);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [username, user]);
+
   const loadProfile = async () => {
     try {
       const profile = await usersApi.getProfile();
@@ -82,14 +96,7 @@ export function Profile() {
     setUsername(value);
     setError(null);
     setSuccess(null);
-    
-    // Debounce validation
-    if (value) {
-      const timeoutId = setTimeout(() => {
-        validateUsername(value);
-      }, 500);
-      return () => clearTimeout(timeoutId);
-    }
+    setValidationMessage(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

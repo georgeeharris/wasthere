@@ -3,16 +3,21 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WasThere.Api.Data;
 using WasThere.Api.Models;
+using System.Text.RegularExpressions;
 
 namespace WasThere.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class UsersController : ControllerBase
+public partial class UsersController : ControllerBase
 {
     private readonly ClubEventContext _context;
     private readonly ILogger<UsersController> _logger;
+    
+    // Compiled regex for username validation
+    [GeneratedRegex(@"^[a-zA-Z0-9_-]+$")]
+    private static partial Regex UsernameValidationRegex();
 
     public UsersController(ClubEventContext context, ILogger<UsersController> logger)
     {
@@ -24,6 +29,26 @@ public class UsersController : ControllerBase
     {
         return User.FindFirst("sub")?.Value ?? 
                User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
+    }
+
+    private (bool IsValid, string? ErrorMessage) ValidateUsername(string username)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            return (false, "Username cannot be empty");
+        }
+
+        if (username.Length < 3 || username.Length > 20)
+        {
+            return (false, "Username must be between 3 and 20 characters");
+        }
+
+        if (!UsernameValidationRegex().IsMatch(username))
+        {
+            return (false, "Username can only contain letters, numbers, hyphens, and underscores");
+        }
+
+        return (true, null);
     }
 
     [HttpGet("profile")]
@@ -70,20 +95,10 @@ public class UsersController : ControllerBase
         }
 
         // Validate username
-        if (string.IsNullOrWhiteSpace(dto.Username))
+        var (isValid, errorMessage) = ValidateUsername(dto.Username);
+        if (!isValid)
         {
-            return BadRequest(new { message = "Username is required" });
-        }
-
-        // Username validation rules
-        if (dto.Username.Length < 3 || dto.Username.Length > 20)
-        {
-            return BadRequest(new { message = "Username must be between 3 and 20 characters" });
-        }
-
-        if (!System.Text.RegularExpressions.Regex.IsMatch(dto.Username, @"^[a-zA-Z0-9_-]+$"))
-        {
-            return BadRequest(new { message = "Username can only contain letters, numbers, hyphens, and underscores" });
+            return BadRequest(new { message = errorMessage });
         }
 
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Auth0UserId == auth0UserId);
@@ -115,19 +130,10 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<UsernameAvailabilityDto>> CheckUsername(string username)
     {
         // Validate username format
-        if (string.IsNullOrWhiteSpace(username))
+        var (isValid, errorMessage) = ValidateUsername(username);
+        if (!isValid)
         {
-            return Ok(new UsernameAvailabilityDto { Available = false, Message = "Username cannot be empty" });
-        }
-
-        if (username.Length < 3 || username.Length > 20)
-        {
-            return Ok(new UsernameAvailabilityDto { Available = false, Message = "Username must be between 3 and 20 characters" });
-        }
-
-        if (!System.Text.RegularExpressions.Regex.IsMatch(username, @"^[a-zA-Z0-9_-]+$"))
-        {
-            return Ok(new UsernameAvailabilityDto { Available = false, Message = "Username can only contain letters, numbers, hyphens, and underscores" });
+            return Ok(new UsernameAvailabilityDto { Available = false, Message = errorMessage });
         }
 
         var exists = await _context.Users.AnyAsync(u => u.Username == username);

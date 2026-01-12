@@ -17,6 +17,7 @@ public class ClubEventContext : DbContext
     public DbSet<Flyer> Flyers { get; set; } = null!;
     public DbSet<User> Users { get; set; } = null!;
     public DbSet<UserClubNightAttendance> UserClubNightAttendances { get; set; } = null!;
+    public DbSet<ClubNightPost> ClubNightPosts { get; set; } = null!;
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -77,5 +78,24 @@ public class ClubEventContext : DbContext
             .HasOne(ucna => ucna.ClubNight)
             .WithMany(cn => cn.Attendances)
             .HasForeignKey(ucna => ucna.ClubNightId);
+        
+        // Configure ClubNightPost relationships
+        modelBuilder.Entity<ClubNightPost>()
+            .HasOne(p => p.ClubNight)
+            .WithMany(cn => cn.Posts)
+            .HasForeignKey(p => p.ClubNightId)
+            .OnDelete(DeleteBehavior.Cascade);
+            
+        modelBuilder.Entity<ClubNightPost>()
+            .HasOne(p => p.User)
+            .WithMany(u => u.Posts)
+            .HasForeignKey(p => p.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+            
+        modelBuilder.Entity<ClubNightPost>()
+            .HasOne(p => p.QuotedPost)
+            .WithMany()
+            .HasForeignKey(p => p.QuotedPostId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

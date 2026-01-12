@@ -109,3 +109,20 @@ export interface FlyerAnalysisResult {
   // Legacy property for backward compatibility
   clubNights: ClubNightData[];
 }
+
+export interface ClubNightPost {
+  id: number;
+  content: string;
+  createdAt: string;
+  username: string | null;
+  quotedPost?: {
+    id: number;
+    content: string;
+    username: string | null;
+  } | null;
+}
+
+export interface ClubNightPostDto {
+  content: string;
+  quotedPostId?: number | null;
+}

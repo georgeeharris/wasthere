@@ -16,4 +16,5 @@ public class ClubNight
     
     public ICollection<ClubNightAct> ClubNightActs { get; set; } = new List<ClubNightAct>();
     public ICollection<UserClubNightAttendance> Attendances { get; set; } = new List<UserClubNightAttendance>();
+    public ICollection<ClubNightPost> Posts { get; set; } = new List<ClubNightPost>();
 }

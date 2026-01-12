@@ -54,8 +54,9 @@ export function ForumSection({ clubNightId }: ForumSectionProps) {
         quotedPostId: quotedPost?.id,
       };
       
-      const newPost = await clubNightsApi.createPost(clubNightId, dto);
-      setPosts([...posts, newPost]);
+      await clubNightsApi.createPost(clubNightId, dto);
+      // Refetch posts to ensure proper ordering
+      await loadPosts();
       setNewPostContent('');
       setQuotedPost(null);
       setError(null);
@@ -164,6 +165,7 @@ export function ForumSection({ clubNightId }: ForumSectionProps) {
           className="forum-textarea"
           rows={4}
           disabled={submitting}
+          maxLength={2000}
         />
         
         <div className="form-actions">

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WasThere.Api.Data;
 using WasThere.Api.Models;
 using Microsoft.AspNetCore.Authorization;
+using System.ComponentModel.DataAnnotations;
 
 namespace WasThere.Api.Controllers;
 
@@ -369,6 +370,8 @@ public class ClubNightsController : ControllerBase
 
 public class ClubNightPostDto
 {
+    [Required(ErrorMessage = "Content is required")]
+    [MaxLength(2000, ErrorMessage = "Content cannot exceed 2000 characters")]
     public string Content { get; set; } = string.Empty;
     public int? QuotedPostId { get; set; }
 }

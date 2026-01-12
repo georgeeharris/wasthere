@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { ClubNight } from '../types';
 import { clubNightsApi, flyersApi } from '../services/api';
+import { ForumSection } from './ForumSection';
 
 export function ClubNightDetail() {
   const { id } = useParams<{ id: string }>();
@@ -109,6 +110,8 @@ export function ClubNightDetail() {
           </div>
         </div>
       </div>
+
+      <ForumSection clubNightId={clubNight.id} />
     </div>
   );
 }

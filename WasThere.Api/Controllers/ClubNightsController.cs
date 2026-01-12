@@ -268,6 +268,109 @@ public class ClubNightsController : ControllerBase
         
         return Ok();
     }
+    
+    // Forum posts endpoints
+    [HttpGet("{id}/posts")]
+    [AllowAnonymous]
+    public async Task<ActionResult<IEnumerable<object>>> GetClubNightPosts(int id)
+    {
+        var clubNight = await _context.ClubNights.FindAsync(id);
+        if (clubNight == null)
+        {
+            return NotFound();
+        }
+        
+        var posts = await _context.ClubNightPosts
+            .Include(p => p.User)
+            .Include(p => p.QuotedPost)
+                .ThenInclude(qp => qp!.User)
+            .Where(p => p.ClubNightId == id)
+            .OrderBy(p => p.CreatedAt)
+            .Select(p => new
+            {
+                p.Id,
+                p.Content,
+                p.CreatedAt,
+                Username = p.User != null ? p.User.Username : "Anonymous",
+                QuotedPost = p.QuotedPost != null ? new
+                {
+                    p.QuotedPost.Id,
+                    p.QuotedPost.Content,
+                    Username = p.QuotedPost.User != null ? p.QuotedPost.User.Username : "Anonymous"
+                } : null
+            })
+            .ToListAsync();
+        
+        return Ok(posts);
+    }
+    
+    [HttpPost("{id}/posts")]
+    public async Task<ActionResult<object>> CreateClubNightPost(int id, ClubNightPostDto dto)
+    {
+        var clubNight = await _context.ClubNights.FindAsync(id);
+        if (clubNight == null)
+        {
+            return NotFound();
+        }
+        
+        var currentUser = await GetOrCreateCurrentUserAsync();
+        if (currentUser == null)
+        {
+            return Unauthorized("User must be authenticated to post.");
+        }
+        
+        // Validate quoted post exists if specified
+        if (dto.QuotedPostId.HasValue)
+        {
+            var quotedPost = await _context.ClubNightPosts
+                .FirstOrDefaultAsync(p => p.Id == dto.QuotedPostId.Value && p.ClubNightId == id);
+            if (quotedPost == null)
+            {
+                return BadRequest("Quoted post not found.");
+            }
+        }
+        
+        var post = new ClubNightPost
+        {
+            ClubNightId = id,
+            UserId = currentUser.Id,
+            Content = dto.Content,
+            QuotedPostId = dto.QuotedPostId,
+            CreatedAt = DateTime.UtcNow
+        };
+        
+        _context.ClubNightPosts.Add(post);
+        await _context.SaveChangesAsync();
+        
+        // Load the post with relationships for response
+        var createdPost = await _context.ClubNightPosts
+            .Include(p => p.User)
+            .Include(p => p.QuotedPost)
+                .ThenInclude(qp => qp!.User)
+            .Where(p => p.Id == post.Id)
+            .Select(p => new
+            {
+                p.Id,
+                p.Content,
+                p.CreatedAt,
+                Username = p.User != null ? p.User.Username : "Anonymous",
+                QuotedPost = p.QuotedPost != null ? new
+                {
+                    p.QuotedPost.Id,
+                    p.QuotedPost.Content,
+                    Username = p.QuotedPost.User != null ? p.QuotedPost.User.Username : "Anonymous"
+                } : null
+            })
+            .FirstOrDefaultAsync();
+        
+        return Ok(createdPost);
+    }
+}
+
+public class ClubNightPostDto
+{
+    public string Content { get; set; } = string.Empty;
+    public int? QuotedPostId { get; set; }
 }
 
 public class ClubNightDto

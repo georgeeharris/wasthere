@@ -1,4 +1,4 @@
-import type { Event, Venue, Act, ClubNight, ClubNightDto, Flyer, DiagnosticInfo, FlyerAnalysisResult, User } from '../types';
+import type { Event, Venue, Act, ClubNight, ClubNightDto, Flyer, DiagnosticInfo, FlyerAnalysisResult, User, ClubNightPost, ClubNightPostDto } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -197,6 +197,25 @@ export const clubNightsApi = {
     await authenticatedFetch(`${API_BASE_URL}/clubnights/${id}/was-there`, {
       method: 'DELETE',
     });
+  },
+  
+  getPosts: async (id: number): Promise<ClubNightPost[]> => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/clubnights/${id}/posts`);
+    if (!response.ok) {
+      throw new Error('Failed to load posts');
+    }
+    return response.json();
+  },
+  
+  createPost: async (id: number, dto: ClubNightPostDto): Promise<ClubNightPost> => {
+    const response = await authenticatedFetch(`${API_BASE_URL}/clubnights/${id}/posts`, {
+      method: 'POST',
+      body: JSON.stringify(dto),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to create post');
+    }
+    return response.json();
   },
 };
 

@@ -7,4 +7,5 @@ public class User
     public string? Auth0UserId { get; set; }  // Auth0 "sub" claim (e.g., "auth0|...")
     
     public ICollection<UserClubNightAttendance> Attendances { get; set; } = new List<UserClubNightAttendance>();
+    public ICollection<ClubNightPost> Posts { get; set; } = new List<ClubNightPost>();
 }
